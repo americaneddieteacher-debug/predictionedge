@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PredictionEdge — Stop betting on vibes. Track your edge.</title>
+<meta name="description" content="Free calibration starter kit for prediction markets: the one equation, Brier scoring, the journal, and 3 diagnostic prompts. Paper-traded, tracked publicly.">
+<meta property="og:title" content="PredictionEdge — Calibration with receipts">
+<meta property="og:description" content="The free field guide to thinking in probabilities on prediction markets. Not financial advice.">
+<meta property="og:type" content="website">
+<style>
+  :root{
+    --ink:#14181f; --muted:#5b6573; --line:#e6e9ef; --bg:#ffffff;
+    --accent:#0b6b5b; --accent-soft:#e8f3f0; --code-bg:#0f1722; --code-ink:#e7edf5;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:17px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased}
+  .wrap{max-width:760px;margin:0 auto;padding:0 24px}
+  a{color:var(--accent);text-decoration:none}
+  /* hero */
+  header{background:linear-gradient(160deg,#0b6b5b 0%,#0a3b34 100%);color:#fff;padding:64px 24px 56px}
+  header .inner{max-width:760px;margin:0 auto}
+  .brand{font-size:13px;letter-spacing:.16em;text-transform:uppercase;opacity:.82;margin:0 0 16px}
+  header h1{font-size:38px;line-height:1.15;margin:0 0 16px;font-weight:780;letter-spacing:-.02em}
+  header .sub{font-size:18px;opacity:.93;margin:0 0 28px;max-width:56ch}
+  .cta-row{display:flex;gap:12px;flex-wrap:wrap}
+  .btn{display:inline-block;font-weight:700;padding:14px 26px;border-radius:999px;font-size:16px;border:0;cursor:pointer}
+  .btn-primary{background:#fff;color:var(--accent)}
+  .btn-ghost{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.3)}
+  .proof{margin-top:24px;font-size:13.5px;opacity:.85}
+  /* sections */
+  section{padding:48px 0}
+  h2{font-size:25px;margin:0 0 18px;letter-spacing:-.01em}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .card{border:1px solid var(--line);border-radius:12px;padding:20px}
+  .card h3{margin:0 0 6px;font-size:16px}
+  .card p{margin:0;color:var(--muted);font-size:14.5px}
+  .steps{counter-reset:s;list-style:none;padding:0;margin:0}
+  .steps li{position:relative;padding:0 0 18px 44px;margin:0}
+  .steps li::before{counter-increment:s;content:counter(s);position:absolute;left:0;top:-2px;
+    width:30px;height:30px;border-radius:50%;background:var(--accent-soft);color:var(--accent);
+    font-weight:700;display:flex;align-items:center;justify-content:center;font-size:15px}
+  .signup{background:var(--accent);color:#fff;border-radius:16px;padding:38px 28px;text-align:center;margin:24px 0}
+  .signup h2{color:#fff;margin:0 0 8px}
+  .signup p{opacity:.94;margin:0 0 22px}
+  .signup .btn-primary{font-size:17px;padding:15px 32px}
+  .fine{color:var(--muted);font-size:12.5px;line-height:1.55;border-top:1px solid var(--line);padding:24px 0 60px}
+  @media (max-width:560px){header h1{font-size:29px}.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header><div class="inner">
+  <p class="brand">PredictionEdge</p>
+  <h1>Stop betting on vibes.<br>Track your edge.</h1>
+  <p class="sub">A free field guide to thinking in probabilities on prediction markets — the one equation, calibration scoring, the journal, and 3 diagnostic prompts. Built on a publicly tracked, paper-traded record.</p>
+  <div class="cta-row">
+    <a class="btn btn-primary" href="#get">Get the free kit</a>
+    <a class="btn btn-ghost" href="/kit.html">Read it online →</a>
+  </div>
+  <p class="proof">Walk-forward audited · paper-traded · calibration tracked publicly · not financial advice</p>
+</div></header>
+
+<div class="wrap">
+  <section>
+    <h2>What's inside the kit</h2>
+    <div class="grid">
+      <div class="card"><h3>The one equation</h3><p>Edge = your probability − the market's price. Why most contracts are no-bets — and that's correct.</p></div>
+      <div class="card"><h3>Calibration &amp; Brier score</h3><p>The one number that tells you if "70% sure" actually happens 70% of the time. Computable in a spreadsheet.</p></div>
+      <div class="card"><h3>The calibration journal</h3><p>The exact template to log every position and prove — to yourself — whether you have an edge.</p></div>
+      <div class="card"><h3>3 diagnostic prompts</h3><p>Paste into any LLM: a calibration audit, an adversarial bet red-team, and a hunch→rule converter.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <h2>How it works</h2>
+    <ol class="steps">
+      <li><strong>Grab the free kit.</strong> The equation, calibration, the journal, and the prompts — enough to start thinking like a forecaster.</li>
+      <li><strong>Log paper bets honestly.</strong> Set your probability <em>before</em> looking at the price. Thirty rows before any conclusion.</li>
+      <li><strong>Grade yourself with Brier, prove patterns on fresh data.</strong> Find on old, prove on new — that's the whole discipline.</li>
+    </ol>
+  </section>
+
+  <section id="get">
+    <div class="signup">
+      <h2>Get the free Calibration Starter Kit</h2>
+      <p>Plus the free Sunday digest — our settled bets, what worked, what didn't, next week's macro setup. Tracked publicly so you can check our honesty.</p>
+      <!-- TODO(USER): replace href with your real Beehiiv subscribe URL (or embed the Beehiiv form here). -->
+      <a class="btn btn-primary" href="https://predictionedge.pro/sub">Send me the kit →</a>
+    </div>
+    <p style="text-align:center;color:var(--muted);font-size:14px">Prefer to read first? <a href="/kit.html">Open the kit in your browser →</a></p>
+  </section>
+
+  <p class="fine">PredictionEdge is <strong>educational research</strong>, not financial, investment, or trading advice. We are <strong>not</strong> a registered Commodity Trading Advisor and we do <strong>not</strong> sell trading signals. We publish our reasoning and our publicly tracked, <strong>paper-trading</strong> record so you can evaluate the <em>method</em>, not copy <em>positions</em>. Prediction markets carry real risk of total loss on any contract. Past results do <strong>not</strong> predict future results. Verify your own eligibility and never risk money you cannot afford to lose. © PredictionEdge.</p>
+</div>
+</body>
+</html>
