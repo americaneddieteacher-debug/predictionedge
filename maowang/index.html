@@ -195,6 +195,23 @@ input[type=range]{width:100%; accent-color:var(--gold); height:32px}
 .big-scene .stats b{display:block; font-size:20px; color:var(--gold)}
 .big-scene .stats span{font-size:11.5px; color:var(--muted)}
 
+/* 도감 */
+.dex-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:10px}
+.dex-cell{background:var(--card); border:1px solid var(--line); border-radius:12px; padding:9px 4px 7px; text-align:center}
+.dex-cell .e{font-size:24px; display:block; line-height:1.2}
+.dex-cell .n{font-size:9.5px; color:var(--muted); display:block; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.dex-cell .c{font-size:9px; color:var(--gold); font-weight:800}
+.dex-cell.lock{opacity:.38; filter:grayscale(1)}
+
+/* 마력 화로(합성) */
+.craft-chips{display:flex; flex-wrap:wrap; gap:6px; margin:10px 0 4px}
+.craft-chip{background:var(--card2); border:1px solid var(--line); border-radius:10px; padding:6px 10px; font-size:13px; cursor:pointer; transition:all .12s}
+.craft-chip.sel{border-color:var(--gold); color:var(--gold2); background:rgba(242,201,109,.12)}
+.craft-chip .tt{font-size:10px; color:var(--muted); margin-left:3px}
+
+/* 엔딩 선택 */
+.end-choice{display:flex; flex-direction:column; gap:10px; width:min(300px,100%); margin-bottom:8px}
+
 @media (min-width:521px){ .app{border-left:1px solid var(--line); border-right:1px solid var(--line)} }
 </style>
 </head>
@@ -210,7 +227,7 @@ input[type=range]{width:100%; accent-color:var(--gold); height:32px}
       <button class="btn" id="btn-continue" style="display:none">이어하기</button>
       <button class="btn ghost" id="btn-new">처음부터</button>
     </div>
-    <p class="title-foot">v1.0 · 자동 저장 · 브라우저에 기록됩니다</p>
+    <p class="title-foot">v1.1 · 자동 저장 · 브라우저에 기록됩니다</p>
   </div>
 
   <!-- 상단바 -->
@@ -296,18 +313,23 @@ input[type=range]{width:100%; accent-color:var(--gold); height:32px}
         <button class="btn small" id="repay-max">최대 상환</button>
       </div>
     </div>
+    <div id="craft-sec"></div>
     <h3 style="margin:20px 2px 2px; font-size:16px">🔨 상점 투자</h3>
     <div class="upg-grid" id="upg-grid"></div>
   </div>
 
   <!-- 엔딩 / 게임오버 -->
   <div class="big-scene" id="scr-ending">
-    <div class="e">🏰✨</div>
-    <h2>마왕성, 부활!</h2>
+    <div class="e" id="ending-e">🏰✨</div>
+    <h2 id="ending-title">마왕성, 부활!</h2>
     <p id="ending-txt"></p>
-    <div class="stats" id="ending-stats"></div>
-    <button class="btn" id="btn-endless">👑 전설의 상회로 계속하기 (무한 모드)</button>
-    <button class="btn ghost" id="btn-ending-restart" style="margin-top:10px">처음부터 다시</button>
+    <div class="end-choice" id="ending-choice">
+      <button class="btn" id="btn-end-peace">🤝 용사를 스카웃한다 (평화의 길)</button>
+      <button class="btn ghost" id="btn-end-conquer">😈 자본으로 재정복한다 (정복의 길)</button>
+    </div>
+    <div class="stats" id="ending-stats" style="display:none"></div>
+    <button class="btn" id="btn-endless" style="display:none">👑 전설의 상회로 계속하기 (무한 모드)</button>
+    <button class="btn ghost" id="btn-ending-restart" style="display:none; margin-top:10px">처음부터 다시</button>
   </div>
   <div class="big-scene" id="scr-gameover">
     <div class="e">⚔️🔥</div>
@@ -406,6 +428,12 @@ const UPG = {
   goblin:{nm:"고블린 조수", e:"👺", ds:"매입가 8% 할인", costs:[1800,4500]},
   deco:{nm:"마계 인테리어", e:"🕸️", ds:"평판 획득 +50%", costs:[1600,4000]},
   safe:{nm:"미믹 금고", e:"🧰", ds:"도둑을 씹어먹음", costs:[2000]},
+  forge:{nm:"마력 화로", e:"⚗️", ds:"같은 카테고리·같은 티어 2개를 상위 티어로 합성", costs:[1500]},
+};
+
+const ACH = {
+  first:"첫 판매", soldout:"완판", rev3000:"하루 매출 3,000G", vip:"VIP 판매",
+  debtfree:"빚 완납", craft:"첫 합성", ending_peace:"평화 엔딩", ending_conquer:"정복 엔딩",
 };
 
 const DEBT_TOTAL = 30000;
@@ -453,6 +481,36 @@ const SND = {
   fail:   ()=> { tone(300,0.2,"sawtooth",0.09); tone(220,0.35,"sawtooth",0.09,0.18); },
 };
 
+/* ─── BGM (프로시저럴 다크판타지 루프) ─── */
+let bgmTimer=null, bgmStep=0;
+const BGM_PROG = [               // Am → F → C → G, 8분음표 아르페지오
+  [220.00, 261.63, 329.63, 261.63],
+  [174.61, 220.00, 261.63, 220.00],
+  [130.81, 164.81, 196.00, 164.81],
+  [196.00, 246.94, 293.66, 246.94],
+];
+function bgmNote(f, dur, type, vol){
+  try{
+    AC = AC || new (window.AudioContext||window.webkitAudioContext)();
+    const t = AC.currentTime;
+    const o = AC.createOscillator(), g = AC.createGain();
+    o.type=type; o.frequency.setValueAtTime(f,t);
+    g.gain.setValueAtTime(0.0001,t);
+    g.gain.exponentialRampToValueAtTime(vol, t+0.04);
+    g.gain.exponentialRampToValueAtTime(0.0001, t+dur);
+    o.connect(g); g.connect(AC.destination); o.start(t); o.stop(t+dur+0.05);
+  }catch(e){}
+}
+function bgmTick(){
+  if (!S || S.bgm===false) return;
+  const bar = Math.floor(bgmStep/4)%4, ni = bgmStep%4;
+  bgmNote(BGM_PROG[bar][ni], 0.5, "triangle", 0.028);
+  if (ni===0) bgmNote(BGM_PROG[bar][0]/2, 1.9, "sine", 0.05);
+  bgmStep++;
+}
+function bgmStart(){ if (!bgmTimer) bgmTimer = setInterval(bgmTick, 480); }
+
+
 /* ─── 상태 ─── */
 const SAVE_KEY = "maowang_save_v1";
 let S = null;
@@ -460,7 +518,7 @@ let S = null;
 function newState(){
   return {
     v:1, day:1, phase:"buy", gold:1000, paid:0, rep:0,
-    inv:[], up:{shelf:0,sign:0,book:0,goblin:0,deco:0,safe:0},
+    inv:[], up:{shelf:0,sign:0,book:0,goblin:0,deco:0,safe:0,forge:0}, bgm:true,
     mult:{}, hot:"wep", cold:"pot", offers:[], refreshed:false,
     custN:0, served:0, cur:null,
     dayStat:{rev:0,cost:0,sold:0,happy:0,angry:0,repD:0},
@@ -469,9 +527,25 @@ function newState(){
     endless:false, total:{rev:0,sold:0}, best:0,
   };
 }
-function save(){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify(S)); }catch(e){} }
+function save(){
+  try{ localStorage.setItem(SAVE_KEY, JSON.stringify(S)); }catch(e){}
+  if (S && S.gold > M.rec.maxGold){ M.rec.maxGold = S.gold; saveMeta(); }
+}
 function loadSave(){ try{ const d = localStorage.getItem(SAVE_KEY); return d? JSON.parse(d): null; }catch(e){ return null; } }
 function wipe(){ try{ localStorage.removeItem(SAVE_KEY); }catch(e){} }
+
+/* 영구 기록(도감·업적·명예의 전당) — 게임을 리셋해도 유지 */
+const META_KEY = "maowang_meta_v1";
+let M = (function(){
+  const def = {dex:{}, ach:[], endings:[], rec:{maxGold:0, bestSale:0, clears:0, endlessBestDay:0, clearGold:0}};
+  try{ return Object.assign(def, JSON.parse(localStorage.getItem(META_KEY)||"{}")); }catch(e){ return def; }
+})();
+function saveMeta(){ try{ localStorage.setItem(META_KEY, JSON.stringify(M)); }catch(e){} }
+function dexAdd(id, price){
+  M.dex[id] = (M.dex[id]||0)+1;
+  if (price && price > M.rec.bestSale) M.rec.bestSale = price;
+  saveMeta();
+}
 
 function repLv(){ let l=0; REP_LV.forEach((r,i)=>{ if (S.rep>=r.min) l=i; }); return l; }
 function repInfo(){
@@ -545,6 +619,7 @@ function sticky(btns){
 /* ─── 하루 시작(매입 준비) ─── */
 function startDay(){
   S.phase="buy"; S.refreshed=false; S.eventDone=false;
+  if (S.endless && S.day > M.rec.endlessBestDay){ M.rec.endlessBestDay = S.day; saveMeta(); }
   S.dayStat={rev:0,cost:0,sold:0,happy:0,angry:0,repD:0};
   // 시세 변동
   Object.keys(CATS).forEach(c=> S.mult[c] = +(R(0.9,1.12)).toFixed(2));
@@ -813,6 +888,7 @@ function saleDone(price, happy, line){
   const repGain = Math.round(((happy===2?3: happy===1?2:1) + (cu.vip?2:0)) * (1+0.5*S.up.deco));
   S.rep+=repGain; S.dayStat.repD+=repGain;
   S.best = Math.max(S.best, price);
+  dexAdd(it.id, price);
   bumpGold(); (price>=800?SND.bigcoin:SND.coin)();
   const card=$("#cust-card");
   if (card){ const rc=card.getBoundingClientRect(); coinFx(rc.left+rc.width/2, rc.top+rc.height/2, price>=800?6:3); }
@@ -851,6 +927,7 @@ function endSellPhase(){
 /* ─── 정산 ─── */
 function renderReport(){
   showScr("scr-report");
+  craftSel=[];
   $("#report-sub").textContent = `Day ${S.day} 결과`;
   const st=S.dayStat;
   const profit = st.rev - st.cost;
@@ -863,9 +940,67 @@ function renderReport(){
   const slot=$("#event-slot"); slot.innerHTML="";
   if (!S.eventDone){ S.eventDone=true; rollEvent(slot); save(); }
   renderDebt();
+  renderCraft();
   renderUpgrades();
   sticky([{label: nextDayLabel(), id:"btn-next-day", fn:nextDay}]);
   renderTop();
+}
+
+/* ─── 마력 화로(합성) ─── */
+let craftSel=[];
+const CRAFT_FEE = {2:120, 3:500};
+function renderCraft(){
+  const sec=$("#craft-sec");
+  if (!S.up.forge){ sec.innerHTML=""; return; }
+  craftSel = craftSel.filter(i=> i < S.inv.length);
+  const chips = S.inv.map((v,i)=>{
+    const it=IT[v.id];
+    return `<span class="craft-chip ${craftSel.includes(i)?"sel":""}" data-i="${i}">${it.e} ${it.nm}<span class="tt">T${it.t}</span></span>`;
+  }).join("") || `<span class="muted" style="font-size:12.5px">합성할 재고가 없습니다.</span>`;
+  // 유효성 판정
+  let actHtml="";
+  if (craftSel.length===2){
+    const a=IT[S.inv[craftSel[0]].id], b=IT[S.inv[craftSel[1]].id];
+    if (a.cat!==b.cat) actHtml=`<div class="muted" style="font-size:12.5px; margin-top:6px">⚠️ 같은 카테고리 2개가 필요합니다.</div>`;
+    else if (a.t!==b.t) actHtml=`<div class="muted" style="font-size:12.5px; margin-top:6px">⚠️ 같은 티어 2개가 필요합니다.</div>`;
+    else if (a.t>=3) actHtml=`<div class="muted" style="font-size:12.5px; margin-top:6px">⚠️ T3는 이미 최고 티어입니다.</div>`;
+    else {
+      const target=a.t+1, fee=CRAFT_FEE[target];
+      actHtml=`<button class="btn small" id="btn-craft" style="margin-top:8px" ${S.gold<fee?"disabled":""}>🔥 합성하기 → ${CATS[a.cat].nm} T${target} <span style="font-weight:600">(비용 ${fmt(fee)}G)</span></button>`;
+    }
+  } else {
+    actHtml=`<div class="muted" style="font-size:12.5px; margin-top:6px">재료 2개를 선택하세요 (${craftSel.length}/2)</div>`;
+  }
+  sec.innerHTML = `<div class="card" style="margin-top:14px; border-color:rgba(242,201,109,.25)">
+    <div style="display:flex; justify-content:space-between; font-size:14px"><b>⚗️ 마력 화로</b><span class="muted" style="font-size:11.5px">같은 카테고리·티어 2개 → 상위 티어</span></div>
+    <div class="craft-chips">${chips}</div>${actHtml}</div>`;
+  $$("#craft-sec .craft-chip").forEach(ch=> ch.onclick=()=>{
+    const i=+ch.dataset.i; SND.click();
+    if (craftSel.includes(i)) craftSel=craftSel.filter(x=>x!==i);
+    else if (craftSel.length<2) craftSel.push(i);
+    renderCraft();
+  });
+  const cb=$("#btn-craft");
+  if (cb) cb.onclick=doCraft;
+}
+function doCraft(){
+  const [i1,i2]=[...craftSel].sort((a,b)=>b-a);
+  const invA=S.inv[i1], invB=S.inv[i2];
+  const a=IT[invA.id];
+  const target=a.t+1, fee=CRAFT_FEE[target];
+  if (S.gold<fee) return;
+  const pool=ITEMS.filter(x=> x.cat===a.cat && x.t===target);
+  if (!pool.length) return;
+  const res=pick(pool);
+  S.gold-=fee;
+  S.inv.splice(i1,1); S.inv.splice(i2,1);
+  S.inv.push({id:res.id, cost:invA.cost+invB.cost+fee});
+  craftSel=[];
+  SND.bigcoin(); bumpGold();
+  toast(`⚗️ 합성 성공! ${res.e} ${res.nm} 획득`, true);
+  unlockAch("craft");
+  save(); renderCraft(); renderDebt(); renderUpgrades(); renderTop();
+  sticky([{label: nextDayLabel(), id:"btn-next-day", fn:nextDay}]);
 }
 function nextDayLabel(){
   const chk = INSTALLMENTS.find(i=>i.day===S.day);
@@ -989,6 +1124,7 @@ function rollEvent(slot){
        const inv=S.inv[idx], it=IT[inv.id];
        const p=Math.round(value(it)*1.35);
        S.inv.splice(idx,1); S.gold+=p; S.rep+=3; S.total.rev+=p; S.total.sold++;
+       dexAdd(it.id, p);
        SND.bigcoin();
        return {nm:"🏰 왕실 납품", tx:`왕실 집사가 <b>${it.e} ${it.nm}</b>을(를) 시세보다 후하게 사 갔다! <b class="gold">+${fmt(p)}G</b>, 평판 +3`};
      }},
@@ -1034,13 +1170,43 @@ function ending(){
   SND.fanfare();
   showScr("scr-ending");
   $("#topbar").style.display="none"; sticky([]);
-  $("#ending-txt").textContent = "30일 만에 빚 30,000G를 완납했다. 용사도, 왕국도, 이제 마왕상회의 단골일 뿐. 세계 정복? 이미 상권 정복으로 끝났다.";
+  M.rec.clears++; M.rec.clearGold = Math.max(M.rec.clearGold, S.gold); saveMeta();
+  $("#ending-e").textContent="🏰✨";
+  $("#ending-title").textContent="마왕성, 부활!";
+  $("#ending-txt").textContent = "30일 만에 빚 30,000G를 완납했다. 금고는 다시 차오르고, 마왕성의 깃발이 올라간다. 이제… 마왕의 다음 행보는?";
+  $("#ending-choice").style.display="";
+  $("#ending-stats").style.display="none";
+  $("#btn-endless").style.display="none";
+  $("#btn-ending-restart").style.display="none";
   $("#ending-stats").innerHTML = `
     <div><b>${fmt(S.total.rev)}G</b><span>누적 매출</span></div>
     <div><b>${S.total.sold}</b><span>판매 건수</span></div>
     <div><b>${repInfo().nm}</b><span>최종 명성</span></div>`;
   save();
 }
+function endingEpilogue(kind){
+  $("#ending-choice").style.display="none";
+  if (kind==="peace"){
+    $("#ending-e").textContent="🤝🏰";
+    $("#ending-title").textContent="평화 엔딩 — 종족 통합 상회";
+    $("#ending-txt").textContent = "마왕은 용사를 영업부장으로 스카웃했다. 마족과 인간이 나란히 줄을 서는 세계 최초의 종족 통합 상회. 전쟁보다 세일이 무섭다는 것을, 세상이 배웠다.";
+    if (!M.endings.includes("peace")) M.endings.push("peace");
+    unlockAch("ending_peace");
+  } else {
+    $("#ending-e").textContent="😈👑";
+    $("#ending-title").textContent="정복 엔딩 — 골드 이즈 파워";
+    $("#ending-txt").textContent = "마왕은 군대 대신 자본을 일으켰다. 왕국의 상권을 하나씩 인수하더니, 마침내 왕실마저 대출을 받으러 왔다. 칼 한 번 뽑지 않은 세계 정복 — 완료.";
+    if (!M.endings.includes("conquer")) M.endings.push("conquer");
+    unlockAch("ending_conquer");
+  }
+  saveMeta();
+  SND.fanfare();
+  $("#ending-stats").style.display="";
+  $("#btn-endless").style.display="";
+  $("#btn-ending-restart").style.display="";
+}
+$("#btn-end-peace").onclick=()=>endingEpilogue("peace");
+$("#btn-end-conquer").onclick=()=>endingEpilogue("conquer");
 $("#btn-endless").onclick=()=>{ S.endless=true; S.day++; save(); startDay(); };
 $("#btn-ending-restart").onclick=()=>{ wipe(); location.reload(); };
 
@@ -1059,11 +1225,10 @@ $("#btn-retry").onclick=()=>{ wipe(); location.reload(); };
 
 /* ─── 업적 ─── */
 function unlockAch(id, label){
-  if (S.ach && S.ach.includes(id)) return;
-  S.ach = S.ach||[];
-  S.ach.push(id);
-  toast(`🏅 업적 달성 — ${label}`, true);
-  save();
+  if (M.ach.includes(id)) return;
+  M.ach.push(id);
+  toast(`🏅 업적 달성 — ${label||ACH[id]||id}`, true);
+  saveMeta();
 }
 
 /* ─── 튜토리얼 ─── */
@@ -1096,22 +1261,59 @@ function tutReport(){
 
 /* ─── 메뉴 ─── */
 $("#tb-menu").onclick=()=>{
+  const dexN = ITEMS.filter(i=>M.dex[i.id]).length;
   modal(`<h3>⚙️ 마왕의 집무실</h3>
-    <div class="rr"><span>🔊 사운드</span><b>${S.sound?"켜짐":"꺼짐"}</b></div>
-    <div class="rr"><span>🏅 업적</span><b>${(S.ach||[]).length} / 5</b></div>
+    <div class="rr"><span>🏅 업적</span><b>${M.ach.length} / ${Object.keys(ACH).length}</b></div>
+    <div class="rr"><span>📔 판매 도감</span><b>${dexN} / ${ITEMS.length}</b></div>
     <div class="rr"><span>💾 저장</span><b class="muted" style="font-weight:600">자동 (이 브라우저)</b></div>
-    <button class="btn ghost" id="mn-sound">사운드 ${S.sound?"끄기":"켜기"}</button>
+    <button class="btn ghost" id="mn-dex">📔 판매 도감</button>
+    <button class="btn ghost" id="mn-hall">🏆 명예의 전당</button>
+    <button class="btn ghost" id="mn-sound">🔊 효과음 ${S.sound?"끄기":"켜기"}</button>
+    <button class="btn ghost" id="mn-bgm">🎵 배경음악 ${S.bgm!==false?"끄기":"켜기"}</button>
     <button class="btn danger" id="mn-reset">처음부터 다시 시작</button>
     <button class="btn" id="mn-close">계속하기</button>`);
-  $("#mn-sound").onclick=()=>{ S.sound=!S.sound; save(); closeModal(); toast(S.sound?"🔊 사운드 켜짐":"🔇 사운드 꺼짐"); };
+  $("#mn-dex").onclick=showDex;
+  $("#mn-hall").onclick=showHall;
+  $("#mn-sound").onclick=()=>{ S.sound=!S.sound; save(); closeModal(); toast(S.sound?"🔊 효과음 켜짐":"🔇 효과음 꺼짐"); };
+  $("#mn-bgm").onclick=()=>{ S.bgm=!(S.bgm!==false); save(); closeModal(); toast(S.bgm?"🎵 배경음악 켜짐":"🔇 배경음악 꺼짐"); };
   $("#mn-close").onclick=()=>{ SND.click(); closeModal(); };
   $("#mn-reset").onclick=()=>{
-    modal(`<h3>⚠️ 정말 초기화할까요?</h3><p class="muted" style="font-size:13.5px">지금까지의 진행이 모두 사라집니다.</p>
+    modal(`<h3>⚠️ 정말 초기화할까요?</h3><p class="muted" style="font-size:13.5px">진행 중인 게임이 사라집니다. (도감·업적·명예의 전당 기록은 유지됩니다)</p>
       <button class="btn danger" id="mn-reset2">네, 갈아엎습니다</button><button class="btn ghost" id="mn-back">취소</button>`);
     $("#mn-reset2").onclick=()=>{ wipe(); location.reload(); };
     $("#mn-back").onclick=closeModal;
   };
 };
+
+function showDex(){
+  const dexN = ITEMS.filter(i=>M.dex[i.id]).length;
+  const cells = ITEMS.map(it=>{
+    const n=M.dex[it.id]||0;
+    return n
+      ? `<div class="dex-cell"><span class="e">${it.e}</span><span class="n">${it.nm}</span><span class="c">${n}회 판매</span></div>`
+      : `<div class="dex-cell lock"><span class="e">❓</span><span class="n">???</span><span class="c">&nbsp;</span></div>`;
+  }).join("");
+  modal(`<h3>📔 판매 도감 <span class="muted" style="font-size:13px; font-weight:600">${dexN}/${ITEMS.length}</span></h3>
+    <p class="muted" style="font-size:12px; margin:0">한 번이라도 판매한 물건이 기록됩니다. 리셋해도 사라지지 않아요.</p>
+    <div class="dex-grid">${cells}</div>
+    <button class="btn" id="dex-close">닫기</button>`);
+  $("#dex-close").onclick=closeModal;
+}
+function showHall(){
+  const achList = Object.entries(ACH).map(([id,nm])=>
+    `<span class="chip" style="margin:2px 2px 0 0; ${M.ach.includes(id)?"border-color:rgba(242,201,109,.5)":"opacity:.4"}">${M.ach.includes(id)?"🏅":"🔒"} ${nm}</span>`).join("");
+  const endTxt = M.endings.length ? M.endings.map(e=>e==="peace"?"🤝 평화":"😈 정복").join(" · ") : "아직 없음";
+  modal(`<h3>🏆 명예의 전당</h3>
+    <div class="rr"><span>👑 빚 완납(클리어)</span><b>${M.rec.clears}회</b></div>
+    <div class="rr"><span>💰 최고 보유 골드</span><b class="gold">${fmt(M.rec.maxGold)}G</b></div>
+    <div class="rr"><span>💎 최고가 판매</span><b class="gold">${fmt(M.rec.bestSale)}G</b></div>
+    <div class="rr"><span>🏰 클리어 시 잔액 최고</span><b class="gold">${fmt(M.rec.clearGold)}G</b></div>
+    <div class="rr"><span>♾️ 무한 모드 최장</span><b>${M.rec.endlessBestDay? M.rec.endlessBestDay+"일차":"—"}</b></div>
+    <div class="rr"><span>🎬 수집한 엔딩</span><b>${endTxt}</b></div>
+    <div style="margin-top:10px">${achList}</div>
+    <button class="btn" id="hall-close">닫기</button>`);
+  $("#hall-close").onclick=closeModal;
+}
 
 /* ─── 렌더 디스패치 ─── */
 function render(){
@@ -1126,11 +1328,19 @@ function render(){
   const sv = loadSave();
   if (sv && sv.v===1 && !sv.gameOver){
     $("#btn-continue").style.display="";
-    $("#btn-continue").onclick=()=>{ S=sv; SND.click(); if (!S.mult || !Object.keys(S.mult).length){ startDay(); } else render(); };
+    $("#btn-continue").onclick=()=>{
+      S=sv;
+      // 구버전 저장 마이그레이션
+      S.up.forge = S.up.forge||0;
+      if (S.bgm===undefined) S.bgm=true;
+      if (Array.isArray(S.ach)){ S.ach.forEach(a=>{ if(!M.ach.includes(a)) M.ach.push(a); }); saveMeta(); }
+      SND.click(); bgmStart();
+      if (!S.mult || !Object.keys(S.mult).length){ startDay(); } else render();
+    };
   }
   $("#btn-new").onclick=()=>{
     if (sv){ if (!confirm("기존 저장이 있습니다. 새로 시작하면 사라집니다. 계속할까요?")) return; }
-    wipe(); S=newState(); SND.click(); startDay();
+    wipe(); S=newState(); SND.click(); bgmStart(); startDay();
   };
 })();
 </script>
