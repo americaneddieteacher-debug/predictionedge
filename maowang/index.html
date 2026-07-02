@@ -1,0 +1,1138 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0e0a1a">
+<title>마왕상회 — 마왕님의 아이템 상점 경영기</title>
+<meta name="description" content="폐업 위기의 마왕성을 구하라! 아이템을 매입하고, 손님과 흥정하고, 30일 안에 빚을 갚는 다크 판타지 상점 경영 게임.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👑</text></svg>">
+<style>
+:root{
+  --bg0:#0e0a1a; --bg1:#191030; --bg2:#231640;
+  --card:rgba(255,255,255,.055); --card2:rgba(255,255,255,.09); --line:rgba(255,255,255,.12);
+  --ink:#f2edff; --muted:#9b90b8; --gold:#f2c96d; --gold2:#ffe3a0;
+  --good:#5fd9b0; --green:#57d98f; --red:#ff6b7a; --purple:#a78bfa; --blue:#7cc3ff;
+  --r:16px;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  margin:0; background:radial-gradient(1200px 800px at 50% -10%, #2a1a52 0%, var(--bg1) 45%, var(--bg0) 100%) fixed;
+  color:var(--ink);
+  font:15px/1.55 -apple-system,BlinkMacSystemFont,"Pretendard","Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif;
+  -webkit-font-smoothing:antialiased; overscroll-behavior:none;
+}
+button{font:inherit; color:inherit; cursor:pointer; border:0; background:none}
+.app{max-width:520px; margin:0 auto; min-height:100dvh; display:flex; flex-direction:column; position:relative}
+
+/* ─── 공용 ─── */
+.btn{
+  display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  background:linear-gradient(180deg,#f6d68b,#e8b653); color:#3a2705; font-weight:800;
+  padding:14px 22px; border-radius:14px; font-size:16px; letter-spacing:.01em;
+  box-shadow:0 4px 14px rgba(240,200,105,.25), inset 0 1px 0 rgba(255,255,255,.5);
+  transition:transform .08s, filter .15s;
+}
+.btn:active{transform:scale(.97)}
+.btn:disabled{filter:grayscale(.9) brightness(.6); cursor:default}
+.btn.ghost{background:var(--card2); color:var(--ink); box-shadow:inset 0 0 0 1px var(--line)}
+.btn.small{padding:9px 14px; font-size:13.5px; border-radius:11px}
+.btn.danger{background:linear-gradient(180deg,#ff8a95,#e35563); color:#3d060c}
+.chip{display:inline-flex; align-items:center; gap:5px; background:var(--card2); border:1px solid var(--line);
+  padding:4px 10px; border-radius:999px; font-size:12px; color:var(--muted)}
+.chip b{color:var(--ink)}
+.card{background:var(--card); border:1px solid var(--line); border-radius:var(--r); padding:16px}
+.gold{color:var(--gold); font-weight:800}
+.muted{color:var(--muted)}
+.sr{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0)}
+
+/* ─── 타이틀 ─── */
+#scr-title{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:32px 24px; gap:0}
+.title-crown{font-size:72px; filter:drop-shadow(0 6px 24px rgba(242,201,109,.45)); animation:float 3.2s ease-in-out infinite}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+.title-name{font-size:52px; font-weight:900; letter-spacing:.06em; margin:10px 0 4px;
+  background:linear-gradient(180deg,var(--gold2),var(--gold) 55%,#c99a3d); -webkit-background-clip:text; background-clip:text; color:transparent;
+  text-shadow:0 0 40px rgba(242,201,109,.18)}
+.title-sub{color:var(--muted); font-size:14.5px; margin:0 0 34px}
+.title-btns{display:flex; flex-direction:column; gap:12px; width:min(280px,100%)}
+.title-foot{position:absolute; bottom:18px; left:0; right:0; text-align:center; color:var(--muted); font-size:11.5px; opacity:.7}
+
+/* ─── 상단바 ─── */
+#topbar{position:sticky; top:0; z-index:30; backdrop-filter:blur(14px); background:rgba(14,10,26,.72);
+  border-bottom:1px solid var(--line); padding:10px 14px calc(10px); display:none}
+.tb-row{display:flex; align-items:center; justify-content:space-between; gap:8px}
+.tb-day{font-weight:900; font-size:15px}
+.tb-day small{color:var(--muted); font-weight:600; margin-left:6px}
+.tb-gold{font-weight:900; color:var(--gold); font-size:16px; transition:transform .15s}
+.tb-gold.bump{transform:scale(1.18)}
+.tb-row2{display:flex; gap:6px; margin-top:8px; flex-wrap:wrap; align-items:center}
+.repbar{flex:1; min-width:90px; height:6px; background:rgba(255,255,255,.08); border-radius:99px; overflow:hidden}
+.repbar i{display:block; height:100%; background:linear-gradient(90deg,var(--purple),#c4b5fd); border-radius:99px; transition:width .4s}
+#tb-menu{font-size:18px; padding:4px 8px; border-radius:9px; background:var(--card2)}
+
+/* ─── 화면 공통 ─── */
+.scr{flex:1; padding:16px 14px 110px; display:none; animation:fadein .35s}
+.scr.on{display:block}
+@keyframes fadein{from{opacity:0; transform:translateY(8px)}to{opacity:1; transform:none}}
+.phase-head{display:flex; align-items:baseline; justify-content:space-between; margin:6px 2px 14px}
+.phase-head h2{margin:0; font-size:21px; font-weight:900}
+.phase-head .sub{color:var(--muted); font-size:12.5px}
+.stickybar{position:fixed; bottom:0; left:0; right:0; z-index:25; padding:12px 14px calc(12px + env(safe-area-inset-bottom));
+  background:linear-gradient(180deg, rgba(14,10,26,0), rgba(14,10,26,.92) 40%); display:none}
+.stickybar .inner{max-width:520px; margin:0 auto; display:flex; gap:10px}
+.stickybar .btn{flex:1}
+
+/* ─── 매입 ─── */
+.offer-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+.offer{position:relative; background:var(--card); border:1px solid var(--line); border-radius:14px; padding:12px; text-align:center; transition:transform .1s, opacity .3s}
+.offer .e{font-size:34px; display:block; margin-bottom:2px}
+.offer .nm{font-weight:700; font-size:13.5px}
+.offer .meta{font-size:11.5px; color:var(--muted); margin:2px 0 8px}
+.offer .buy{width:100%; background:var(--card2); border:1px solid var(--line); border-radius:10px; padding:8px 4px; font-weight:800; font-size:13.5px; color:var(--gold)}
+.offer .buy:disabled{opacity:.35}
+.offer.sold-out{opacity:.35; pointer-events:none}
+.offer .disc{position:absolute; top:8px; right:8px; font-size:10.5px; background:rgba(87,217,143,.15); color:var(--green); border-radius:99px; padding:2px 7px; font-weight:800}
+.tier-tag{font-size:10px; font-weight:800; border-radius:5px; padding:1px 5px; vertical-align:1px}
+.t1{background:rgba(124,195,255,.15); color:var(--blue)} .t2{background:rgba(167,139,250,.18); color:var(--purple)} .t3{background:rgba(242,201,109,.15); color:var(--gold)}
+
+/* ─── 영업(손님) ─── */
+#cust-area{min-height:220px}
+.cust-card{background:linear-gradient(180deg,var(--bg2),rgba(255,255,255,.03)); border:1px solid var(--line); border-radius:20px; padding:18px 16px 14px; position:relative; animation:custin .4s cubic-bezier(.2,.9,.3,1.2)}
+@keyframes custin{from{opacity:0; transform:translateX(60px) }to{opacity:1; transform:none}}
+.cust-card.shake{animation:shake .4s}
+@keyframes shake{0%,100%{transform:none}25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
+.cust-top{display:flex; gap:14px; align-items:center}
+.cust-face{font-size:52px; line-height:1; filter:drop-shadow(0 4px 12px rgba(0,0,0,.4))}
+.cust-info{flex:1}
+.cust-nm{font-weight:900; font-size:16.5px}
+.cust-nm .vip{color:var(--gold); font-size:11px; border:1px solid var(--gold); border-radius:5px; padding:1px 5px; margin-left:6px; vertical-align:2px}
+.cust-tags{display:flex; gap:6px; margin-top:5px; flex-wrap:wrap}
+.hearts{font-size:13px; letter-spacing:2px}
+.bubble{margin-top:12px; background:rgba(255,255,255,.07); border:1px solid var(--line); padding:11px 14px; border-radius:4px 14px 14px 14px; font-size:14px; min-height:44px}
+.bubble em{color:var(--gold2); font-style:normal; font-weight:700}
+#queue-info{text-align:center; color:var(--muted); font-size:12px; margin:10px 0 4px}
+.qdots{display:inline-flex; gap:4px; vertical-align:-1px; margin-left:6px}
+.qdots i{width:6px;height:6px;border-radius:99px;background:var(--line)} .qdots i.done{background:var(--green)}
+
+/* 인벤토리 */
+.inv-head{display:flex; justify-content:space-between; align-items:center; margin:16px 2px 8px; font-size:13px; color:var(--muted); font-weight:700}
+.inv-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:8px}
+.slot{aspect-ratio:1; background:var(--card); border:1px solid var(--line); border-radius:13px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; position:relative; transition:all .12s}
+.slot .e{font-size:26px} .slot .p{font-size:10px; color:var(--muted); font-weight:700}
+.slot.sel{border-color:var(--gold); background:rgba(242,201,109,.1); box-shadow:0 0 0 2px rgba(242,201,109,.35)}
+.slot.want::after{content:"!"; position:absolute; top:4px; right:6px; color:var(--green); font-weight:900; font-size:12px}
+.slot.empty{opacity:.25; border-style:dashed}
+.slot .e{pointer-events:none}.slot .p{pointer-events:none}
+
+/* 가격 패널 */
+#price-panel{margin-top:12px; display:none}
+#price-panel.on{display:block; animation:fadein .25s}
+.pp-item{display:flex; align-items:center; gap:10px; margin-bottom:10px; font-size:13.5px}
+.pp-item .e{font-size:24px}
+.pp-price{font-size:26px; font-weight:900; color:var(--gold); text-align:center; margin:4px 0}
+.pp-pct{text-align:center; font-size:12px; color:var(--muted); margin-bottom:6px}
+input[type=range]{width:100%; accent-color:var(--gold); height:32px}
+.pp-presets{display:flex; gap:6px; margin:4px 0 12px}
+.pp-presets button{flex:1; background:var(--card2); border:1px solid var(--line); border-radius:9px; padding:7px 0; font-size:12px; font-weight:700; color:var(--muted)}
+.pp-presets button.on{color:var(--gold); border-color:var(--gold)}
+.sell-actions{display:flex; gap:8px}
+.sell-actions .btn{flex:1}
+
+/* 흥정 카운터 */
+#counter-box{margin-top:12px; display:none; background:rgba(242,201,109,.08); border:1px solid rgba(242,201,109,.3); border-radius:14px; padding:14px; animation:fadein .25s}
+#counter-box.on{display:block}
+#counter-box .cp{font-size:20px; font-weight:900; color:var(--gold)}
+
+/* ─── 정산 ─── */
+.report-rows{display:flex; flex-direction:column; gap:0}
+.rr{display:flex; justify-content:space-between; padding:10px 2px; border-bottom:1px dashed rgba(255,255,255,.08); font-size:14px}
+.rr:last-child{border:0}
+.rr b.pos{color:var(--green)} .rr b.neg{color:var(--red)}
+.debt-box{margin-top:14px}
+.debt-bar{height:10px; background:rgba(255,255,255,.08); border-radius:99px; overflow:hidden; margin:10px 0 6px}
+.debt-bar i{display:block; height:100%; background:linear-gradient(90deg,#e8b653,var(--gold2)); border-radius:99px; transition:width .5s}
+.debt-next{font-size:12px; color:var(--muted)}
+.debt-next b{color:var(--red)}
+.repay-row{display:flex; gap:7px; margin-top:12px}
+.repay-row .btn{flex:1; padding:11px 6px; font-size:13.5px}
+.upg-grid{display:flex; flex-direction:column; gap:9px; margin-top:10px}
+.upg{display:flex; align-items:center; gap:12px; background:var(--card); border:1px solid var(--line); border-radius:14px; padding:12px 14px}
+.upg .e{font-size:28px}
+.upg .body{flex:1} .upg .nm{font-weight:800; font-size:14px} .upg .ds{font-size:11.5px; color:var(--muted)}
+.upg .lv{font-size:10.5px; color:var(--purple); font-weight:800}
+.upg .btn{padding:9px 13px; font-size:12.5px; white-space:nowrap}
+.event-card{margin:14px 0; background:linear-gradient(135deg, rgba(167,139,250,.14), rgba(124,195,255,.07)); border:1px solid rgba(167,139,250,.35); border-radius:16px; padding:16px; animation:fadein .4s}
+.event-card .ti{font-weight:900; font-size:15px; margin-bottom:4px}
+.event-card .tx{font-size:13.5px; color:#cfc6ea}
+.event-card .acts{display:flex; gap:8px; margin-top:12px}
+.event-card .acts .btn{flex:1; font-size:13.5px; padding:11px 8px}
+
+/* ─── 모달/토스트 ─── */
+.modal-wrap{position:fixed; inset:0; z-index:60; background:rgba(5,3,12,.7); backdrop-filter:blur(6px);
+  display:none; align-items:center; justify-content:center; padding:22px}
+.modal-wrap.on{display:flex; animation:fadein .2s}
+.modal{width:min(420px,100%); max-height:82dvh; overflow:auto; background:var(--bg2); border:1px solid var(--line); border-radius:20px; padding:22px}
+.modal h3{margin:0 0 10px; font-size:18px}
+.modal .btn{width:100%; margin-top:10px}
+#toast-wrap{position:fixed; top:calc(104px + env(safe-area-inset-top)); left:0; right:0; z-index:70; display:flex; flex-direction:column; align-items:center; gap:8px; pointer-events:none}
+.toast{background:rgba(20,14,40,.95); border:1px solid var(--line); color:var(--ink); padding:10px 18px; border-radius:99px; font-size:13px; font-weight:700; box-shadow:0 8px 30px rgba(0,0,0,.5); animation:toastin .3s}
+@keyframes toastin{from{opacity:0; transform:translateY(-12px)}to{opacity:1; transform:none}}
+.toast.goldt{border-color:rgba(242,201,109,.5); color:var(--gold2)}
+
+/* 코인 이펙트 */
+.fx-coin{position:fixed; z-index:80; font-size:22px; pointer-events:none; animation:coinfly .8s forwards}
+@keyframes coinfly{0%{opacity:1; transform:translateY(0) scale(1)}100%{opacity:0; transform:translateY(-90px) scale(.6)}}
+
+/* 엔딩 */
+.big-scene{flex:1; display:none; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:32px 26px; animation:fadein .5s}
+.big-scene.on{display:flex}
+.big-scene .e{font-size:80px; margin-bottom:14px}
+.big-scene h2{font-size:28px; margin:0 0 10px}
+.big-scene p{color:var(--muted); max-width:34ch; margin:0 0 26px}
+.big-scene .stats{display:flex; gap:18px; margin-bottom:26px}
+.big-scene .stats div{text-align:center}
+.big-scene .stats b{display:block; font-size:20px; color:var(--gold)}
+.big-scene .stats span{font-size:11.5px; color:var(--muted)}
+
+@media (min-width:521px){ .app{border-left:1px solid var(--line); border-right:1px solid var(--line)} }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- 타이틀 -->
+  <div id="scr-title">
+    <div class="title-crown">👑</div>
+    <h1 class="title-name">마왕상회</h1>
+    <p class="title-sub">용사에게 패배한 마왕, 이제는 장사로 세계를 정복한다.<br>30일 안에 마왕성 재건 빚 <b class="gold">30,000G</b>를 갚아라!</p>
+    <div class="title-btns">
+      <button class="btn" id="btn-continue" style="display:none">이어하기</button>
+      <button class="btn ghost" id="btn-new">처음부터</button>
+    </div>
+    <p class="title-foot">v1.0 · 자동 저장 · 브라우저에 기록됩니다</p>
+  </div>
+
+  <!-- 상단바 -->
+  <div id="topbar">
+    <div class="tb-row">
+      <div class="tb-day"><span id="tb-day"></span><small id="tb-phase"></small></div>
+      <div style="display:flex; align-items:center; gap:10px">
+        <div class="tb-gold" id="tb-gold">0G</div>
+        <button id="tb-menu" aria-label="메뉴">☰</button>
+      </div>
+    </div>
+    <div class="tb-row2">
+      <span class="chip" id="tb-rep-chip">🏆 <b id="tb-rep-nm"></b></span>
+      <div class="repbar" title="평판"><i id="tb-rep-bar"></i></div>
+      <span class="chip" title="오늘 비싸게 팔리는 카테고리">📈 유행 <b id="tb-hot"></b></span>
+      <span class="chip" title="오늘 안 팔리는 카테고리">📉 비인기 <b id="tb-cold"></b></span>
+      <span class="chip" id="tb-debt-chip">💸 빚 <b id="tb-debt"></b></span>
+    </div>
+  </div>
+
+  <!-- 매입 -->
+  <div class="scr" id="scr-buy">
+    <div class="phase-head">
+      <h2>🌅 아침 시장</h2>
+      <span class="sub">도매상에게서 오늘 팔 물건을 매입하세요</span>
+    </div>
+    <div class="offer-grid" id="offer-grid"></div>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px">
+      <span class="chip">🎒 재고 <b id="buy-inv-n"></b></span>
+      <button class="btn small ghost" id="btn-refresh">🔄 새 목록 보기 <span class="gold">100G</span></button>
+    </div>
+    <div class="inv-head"><span>내 재고</span><span id="buy-inv-cap"></span></div>
+    <div class="inv-grid" id="buy-inv"></div>
+  </div>
+
+  <!-- 영업 -->
+  <div class="scr" id="scr-sell">
+    <div class="phase-head">
+      <h2>🕯️ 영업 중</h2>
+      <span class="sub" id="sell-sub"></span>
+    </div>
+    <div id="queue-info"></div>
+    <div id="cust-area"></div>
+    <div id="counter-box"></div>
+    <div id="price-panel">
+      <div class="card">
+        <div class="pp-item"><span class="e" id="pp-e"></span><div><b id="pp-nm"></b><div class="muted" style="font-size:11.5px">시세 <span id="pp-base"></span>G · 매입가 <span id="pp-cost"></span>G</div></div></div>
+        <div class="pp-price" id="pp-price">0G</div>
+        <div class="pp-pct" id="pp-pct">시세의 110%</div>
+        <input type="range" id="price-range" min="50" max="250" step="5" value="110">
+        <div class="pp-presets">
+          <button data-pct="80">저가 80%</button>
+          <button data-pct="110" class="on">적정 110%</button>
+          <button data-pct="140">강경 140%</button>
+          <button data-pct="180">배짱 180%</button>
+        </div>
+        <div class="sell-actions">
+          <button class="btn" id="btn-propose">이 가격에 제안 💬</button>
+        </div>
+      </div>
+    </div>
+    <div class="inv-head"><span>진열대 <span class="muted" style="font-weight:500">(눌러서 손님에게 제안)</span></span><span id="sell-inv-cap"></span></div>
+    <div class="inv-grid" id="sell-inv"></div>
+  </div>
+
+  <!-- 정산 -->
+  <div class="scr" id="scr-report">
+    <div class="phase-head">
+      <h2>🌙 하루 정산</h2>
+      <span class="sub" id="report-sub"></span>
+    </div>
+    <div class="card">
+      <div class="report-rows" id="report-rows"></div>
+    </div>
+    <div id="event-slot"></div>
+    <div class="card debt-box">
+      <div style="display:flex; justify-content:space-between; font-size:14px"><b>💸 마왕성 재건 빚</b><b class="gold" id="debt-left"></b></div>
+      <div class="debt-bar"><i id="debt-bar"></i></div>
+      <div class="debt-next" id="debt-next"></div>
+      <div class="repay-row">
+        <button class="btn ghost small" id="repay-1000">1,000G 상환</button>
+        <button class="btn ghost small" id="repay-half">절반 상환</button>
+        <button class="btn small" id="repay-max">최대 상환</button>
+      </div>
+    </div>
+    <h3 style="margin:20px 2px 2px; font-size:16px">🔨 상점 투자</h3>
+    <div class="upg-grid" id="upg-grid"></div>
+  </div>
+
+  <!-- 엔딩 / 게임오버 -->
+  <div class="big-scene" id="scr-ending">
+    <div class="e">🏰✨</div>
+    <h2>마왕성, 부활!</h2>
+    <p id="ending-txt"></p>
+    <div class="stats" id="ending-stats"></div>
+    <button class="btn" id="btn-endless">👑 전설의 상회로 계속하기 (무한 모드)</button>
+    <button class="btn ghost" id="btn-ending-restart" style="margin-top:10px">처음부터 다시</button>
+  </div>
+  <div class="big-scene" id="scr-gameover">
+    <div class="e">⚔️🔥</div>
+    <h2>상점 압류…</h2>
+    <p id="gameover-txt"></p>
+    <div class="stats" id="gameover-stats"></div>
+    <button class="btn" id="btn-retry">다시 도전하기</button>
+  </div>
+
+  <!-- 하단 진행 버튼 -->
+  <div class="stickybar" id="stickybar"><div class="inner" id="sticky-inner"></div></div>
+
+  <!-- 모달 -->
+  <div class="modal-wrap" id="modal-wrap">
+    <div class="modal" id="modal-body"></div>
+  </div>
+
+  <div id="toast-wrap"></div>
+</div>
+
+<script>
+"use strict";
+/* ============================================================
+   마왕상회 v1.0 — 상점 경영 게임
+   ============================================================ */
+
+/* ─── 데이터 ─── */
+const CATS = {
+  pot:{nm:"물약", e:"🧪"}, wep:{nm:"무기", e:"⚔️"}, arm:{nm:"방어구", e:"🛡️"},
+  mag:{nm:"마법", e:"📜"}, acc:{nm:"장신구", e:"💍"}, rel:{nm:"유물", e:"🗿"},
+};
+const ITEMS = [
+  {id:"p1", nm:"하급 회복 물약", e:"🧪", cat:"pot", t:1, base:60},
+  {id:"p2", nm:"마나 물약",     e:"💙", cat:"pot", t:1, base:95},
+  {id:"p3", nm:"상급 회복 물약", e:"🍶", cat:"pot", t:2, base:240},
+  {id:"p4", nm:"엘릭서",        e:"✨", cat:"pot", t:3, base:950},
+  {id:"w1", nm:"녹슨 단검",     e:"🗡️", cat:"wep", t:1, base:85},
+  {id:"w2", nm:"강철 검",       e:"⚔️", cat:"wep", t:1, base:160},
+  {id:"w3", nm:"미스릴 검",     e:"🔱", cat:"wep", t:2, base:490},
+  {id:"w4", nm:"용살자 대검",   e:"🐲", cat:"wep", t:3, base:1500},
+  {id:"a1", nm:"가죽 갑옷",     e:"🦺", cat:"arm", t:1, base:120},
+  {id:"a2", nm:"강철 방패",     e:"🛡️", cat:"arm", t:1, base:185},
+  {id:"a3", nm:"미스릴 갑옷",   e:"🥋", cat:"arm", t:2, base:560},
+  {id:"a4", nm:"용비늘 갑옷",   e:"🐉", cat:"arm", t:3, base:1700},
+  {id:"m1", nm:"화염 주문서",   e:"📜", cat:"mag", t:1, base:115},
+  {id:"m2", nm:"얼음 주문서",   e:"❄️", cat:"mag", t:1, base:135},
+  {id:"m3", nm:"번개 마도서",   e:"⚡", cat:"mag", t:2, base:430},
+  {id:"m4", nm:"금단의 마법서", e:"📕", cat:"mag", t:3, base:1300},
+  {id:"c1", nm:"행운의 반지",   e:"💍", cat:"acc", t:1, base:105},
+  {id:"c2", nm:"은 목걸이",     e:"📿", cat:"acc", t:1, base:145},
+  {id:"c3", nm:"수호 부적",     e:"🧿", cat:"acc", t:2, base:390},
+  {id:"c4", nm:"현자의 목걸이", e:"🔮", cat:"acc", t:3, base:1150},
+  {id:"r1", nm:"고블린 금화",   e:"🪙", cat:"rel", t:1, base:75},
+  {id:"r2", nm:"저주받은 인형", e:"🪆", cat:"rel", t:2, base:320},
+  {id:"r3", nm:"봉인된 마검",   e:"🗡", cat:"rel", t:3, base:1800},
+  {id:"r4", nm:"마족의 왕관",   e:"👑", cat:"rel", t:3, base:2100},
+];
+const IT = Object.fromEntries(ITEMS.map(i=>[i.id,i]));
+
+/* 손님: w = 평판레벨 0~4 별 등장 가중치 */
+const CUSTS = [
+  {id:"villager", nm:"마을 주민",   e:"👨‍🌾", tol:[0.95,1.25], pat:2, cats:["pot","acc"],        maxT:1, w:[5,4,3,2,1],
+   greet:["요즘 몸이 예전 같지 않아서 말이야…","밭일에 쓸 만한 게 있을까?"]},
+  {id:"novice",   nm:"견습 용사",   e:"🧑‍🦰", tol:[1.15,1.55], pat:3, cats:["wep","arm","pot"],   maxT:1, w:[5,5,4,3,2],
+   greet:["첫 모험을 떠나요! 뭐가 필요할까요?","마왕을… 아니, 몬스터를 잡으러 갑니다!"]},
+  {id:"goblin",   nm:"고블린 상인", e:"👺", tol:[0.85,1.15], pat:2, cats:["rel","wep"],          maxT:2, w:[4,3,3,2,2],
+   greet:["끼끼… 싸게 주면 사겠다…","비싸면 안 산다. 끼기긱."]},
+  {id:"adv",      nm:"모험가",      e:"🏹", tol:[1.05,1.40], pat:3, cats:["wep","arm","pot"],    maxT:2, w:[3,4,5,4,3],
+   greet:["던전 재입장 전에 보급하러 왔소.","좋은 물건엔 값을 치르지."]},
+  {id:"mage",     nm:"마법사",      e:"🧙", tol:[1.20,1.65], pat:3, cats:["mag","acc"],          maxT:2, w:[2,3,4,4,3],
+   greet:["지식에는 대가가 따르는 법이지.","마력이 깃든 물건을 찾고 있네."]},
+  {id:"knight",   nm:"왕국 기사",   e:"🤺", tol:[1.25,1.70], pat:2, cats:["wep","arm"],          maxT:2, w:[1,3,4,4,3],
+   greet:["왕국의 이름으로, 좋은 장비를 요구한다!","무딘 검으론 명예를 지킬 수 없지."]},
+  {id:"noble",    nm:"귀족",        e:"🎩", tol:[1.50,2.10], pat:2, cats:["acc","rel","mag"],    maxT:3, w:[0,1,3,4,4],
+   greet:["흠, 이 가게가 요즘 소문의 그곳인가?","돈은 문제가 아니네. 품격이 문제지."]},
+  {id:"lich",     nm:"리치",        e:"💀", tol:[1.40,2.00], pat:3, cats:["mag","rel"],          maxT:3, w:[0,1,2,3,4],
+   greet:["산 자의 상점이라… 흥미롭군.","영겁의 시간, 돈은 쌓일 만큼 쌓였다."]},
+  {id:"princess", nm:"공주",        e:"👸", tol:[1.70,2.35], pat:2, cats:["acc","rel"],          maxT:3, w:[0,0,1,2,3], vip:true,
+   greet:["호위 몰래 나왔어요. 예쁜 것 보여주세요!","성 안 물건들은 죄다 지루해서요."]},
+  {id:"dragon",   nm:"고룡",        e:"🐉", tol:[2.00,2.80], pat:1, cats:["rel","acc"],          maxT:3, w:[0,0,0,1,3], vip:true,
+   greet:["인간의 화폐로 보물을 사는 것도 색다르군.","내 둥지에 어울릴 물건을 내놓아라."]},
+];
+
+const REP_LV = [
+  {min:0,   nm:"무명 상점"},
+  {min:30,  nm:"뒷골목 명소"},
+  {min:80,  nm:"지역 명물"},
+  {min:160, nm:"왕국의 화제"},
+  {min:280, nm:"전설의 상회"},
+];
+
+const UPG = {
+  shelf:{nm:"진열대 확장", e:"🪑", ds:"재고 칸 +4", costs:[900,2600,6500]},
+  sign:{nm:"마성의 간판", e:"🪧", ds:"하루 손님 +2명", costs:[800,2200,5500]},
+  book:{nm:"흥정의 마도서", e:"📖", ds:"손님 지갑이 7% 더 열림", costs:[1200,3200,7500]},
+  goblin:{nm:"고블린 조수", e:"👺", ds:"매입가 8% 할인", costs:[1800,4500]},
+  deco:{nm:"마계 인테리어", e:"🕸️", ds:"평판 획득 +50%", costs:[1600,4000]},
+  safe:{nm:"미믹 금고", e:"🧰", ds:"도둑을 씹어먹음", costs:[2000]},
+};
+
+const DEBT_TOTAL = 30000;
+const INSTALLMENTS = [ {day:10, amt:2500}, {day:20, amt:10000}, {day:30, amt:30000} ];
+
+/* ─── 유틸 ─── */
+const $  = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const R  = (a,b) => a + Math.random()*(b-a);
+const RI = (a,b) => Math.floor(R(a,b+1));
+const pick = arr => arr[Math.floor(Math.random()*arr.length)];
+const fmt = n => Math.round(n).toLocaleString("ko-KR");
+const clamp = (v,a,b) => Math.max(a, Math.min(b,v));
+
+function wpick(list, wf){
+  const ws = list.map(wf); const tot = ws.reduce((a,b)=>a+b,0);
+  if (tot<=0) return pick(list);
+  let r = Math.random()*tot;
+  for (let i=0;i<list.length;i++){ r-=ws[i]; if (r<=0) return list[i]; }
+  return list[list.length-1];
+}
+
+/* ─── 사운드 (WebAudio 신스) ─── */
+let AC=null;
+function tone(f, dur=0.08, type="sine", vol=0.12, delay=0){
+  if (!S || !S.sound) return;
+  try{
+    AC = AC || new (window.AudioContext||window.webkitAudioContext)();
+    const t = AC.currentTime + delay;
+    const o = AC.createOscillator(), g = AC.createGain();
+    o.type=type; o.frequency.setValueAtTime(f,t);
+    g.gain.setValueAtTime(vol,t); g.gain.exponentialRampToValueAtTime(0.0001, t+dur);
+    o.connect(g); g.connect(AC.destination); o.start(t); o.stop(t+dur+0.02);
+  }catch(e){}
+}
+const SND = {
+  click:  ()=> tone(700,0.05,"square",0.05),
+  buy:    ()=> { tone(520,0.07,"triangle",0.1); tone(780,0.09,"triangle",0.1,0.06); },
+  coin:   ()=> { tone(988,0.07,"sine",0.12); tone(1319,0.12,"sine",0.12,0.07); },
+  bigcoin:()=> { tone(988,0.07,"sine",0.13); tone(1319,0.08,"sine",0.13,0.07); tone(1568,0.16,"sine",0.13,0.14); },
+  angry:  ()=> tone(150,0.25,"sawtooth",0.09),
+  haggle: ()=> tone(420,0.12,"triangle",0.09),
+  event:  ()=> { tone(392,0.1,"triangle",0.1); tone(494,0.1,"triangle",0.1,0.1); tone(587,0.18,"triangle",0.1,0.2); },
+  fanfare:()=> [523,659,784,1047].forEach((f,i)=>tone(f,0.22,"triangle",0.12,i*0.13)),
+  fail:   ()=> { tone(300,0.2,"sawtooth",0.09); tone(220,0.35,"sawtooth",0.09,0.18); },
+};
+
+/* ─── 상태 ─── */
+const SAVE_KEY = "maowang_save_v1";
+let S = null;
+
+function newState(){
+  return {
+    v:1, day:1, phase:"buy", gold:1000, paid:0, rep:0,
+    inv:[], up:{shelf:0,sign:0,book:0,goblin:0,deco:0,safe:0},
+    mult:{}, hot:"wep", cold:"pot", offers:[], refreshed:false,
+    custN:0, served:0, cur:null,
+    dayStat:{rev:0,cost:0,sold:0,happy:0,angry:0,repD:0},
+    buff:{festival:false, rain:false, boom:false},
+    eventDone:false, sound:true, tut:{buy:false,sell:false,report:false,haggle:false},
+    endless:false, total:{rev:0,sold:0}, best:0,
+  };
+}
+function save(){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify(S)); }catch(e){} }
+function loadSave(){ try{ const d = localStorage.getItem(SAVE_KEY); return d? JSON.parse(d): null; }catch(e){ return null; } }
+function wipe(){ try{ localStorage.removeItem(SAVE_KEY); }catch(e){} }
+
+function repLv(){ let l=0; REP_LV.forEach((r,i)=>{ if (S.rep>=r.min) l=i; }); return l; }
+function repInfo(){
+  const lv=repLv(), cur=REP_LV[lv], next=REP_LV[lv+1];
+  const pct = next? clamp((S.rep-cur.min)/(next.min-cur.min)*100,0,100) : 100;
+  return {lv, nm:cur.nm, pct};
+}
+function invCap(){ return 8 + S.up.shelf*4; }
+function debtLeft(){ return DEBT_TOTAL - S.paid; }
+function maxTier(){ const lv=repLv(); return lv>=3?3: lv>=1?2:1; }
+function value(item){ return Math.round(item.base * (S.mult[item.cat]||1)); }
+
+/* ─── UI 헬퍼 ─── */
+function toast(msg, gold=false){
+  const t = document.createElement("div");
+  t.className = "toast"+(gold?" goldt":"");
+  t.textContent = msg;
+  $("#toast-wrap").appendChild(t);
+  setTimeout(()=>{ t.style.transition="opacity .4s"; t.style.opacity="0"; setTimeout(()=>t.remove(),400); }, 2200);
+}
+function coinFx(x,y,n=3){
+  for (let i=0;i<n;i++){
+    const c=document.createElement("div"); c.className="fx-coin"; c.textContent="🪙";
+    c.style.left=(x+R(-24,24))+"px"; c.style.top=(y+R(-8,8))+"px"; c.style.animationDelay=(i*0.07)+"s";
+    document.body.appendChild(c); setTimeout(()=>c.remove(),1000);
+  }
+}
+function bumpGold(){
+  const el=$("#tb-gold"); el.classList.remove("bump"); void el.offsetWidth; el.classList.add("bump");
+}
+function modal(html, opts={}){
+  $("#modal-body").innerHTML = html;
+  $("#modal-wrap").classList.add("on");
+  if (!opts.sticky){
+    $("#modal-wrap").onclick = e => { if (e.target.id==="modal-wrap") closeModal(); };
+  } else $("#modal-wrap").onclick = null;
+}
+function closeModal(){ $("#modal-wrap").classList.remove("on"); }
+
+function renderTop(){
+  $("#topbar").style.display = "block";
+  $("#tb-day").textContent = S.endless? `${S.day}일차`: `Day ${S.day}/30`;
+  $("#tb-phase").textContent = {buy:"아침 시장", sell:"영업 중", report:"정산"}[S.phase]||"";
+  $("#tb-gold").textContent = fmt(S.gold)+"G";
+  const ri = repInfo();
+  $("#tb-rep-nm").textContent = ri.nm;
+  $("#tb-rep-bar").style.width = ri.pct+"%";
+  $("#tb-hot").textContent = CATS[S.hot].nm;
+  $("#tb-cold").textContent = CATS[S.cold].nm;
+  $("#tb-debt").textContent = S.endless||debtLeft()<=0 ? "완납!" : fmt(debtLeft())+"G";
+}
+function showScr(id){
+  $$(".scr,.big-scene").forEach(el=>el.classList.remove("on"));
+  $("#scr-title").style.display="none";
+  const el=$("#"+id); el.classList.add("on");
+  window.scrollTo({top:0});
+}
+function sticky(btns){
+  const bar=$("#stickybar"), inner=$("#sticky-inner");
+  inner.innerHTML="";
+  if (!btns || !btns.length){ bar.style.display="none"; return; }
+  btns.forEach(b=>{
+    const el=document.createElement("button");
+    el.className="btn"+(b.ghost?" ghost":""); el.id=b.id||""; el.innerHTML=b.label;
+    el.onclick=b.fn; if (b.disabled) el.disabled=true;
+    inner.appendChild(el);
+  });
+  bar.style.display="block";
+}
+
+/* ─── 하루 시작(매입 준비) ─── */
+function startDay(){
+  S.phase="buy"; S.refreshed=false; S.eventDone=false;
+  S.dayStat={rev:0,cost:0,sold:0,happy:0,angry:0,repD:0};
+  // 시세 변동
+  Object.keys(CATS).forEach(c=> S.mult[c] = +(R(0.9,1.12)).toFixed(2));
+  // 유행
+  const cats=Object.keys(CATS);
+  S.hot = pick(cats);
+  do { S.cold = pick(cats); } while (S.cold===S.hot);
+  if (S.buff.boom) { /* 유행 대변동: hot 효과는 tolEff에서 강화 */ }
+  // 손님 수
+  let n = 8 + repLv()*2 + S.up.sign*2;
+  if (S.buff.festival) n = Math.round(n*1.5);
+  if (S.buff.rain) n = Math.round(n*0.65);
+  S.custN = clamp(n + RI(-1,1), 4, 18);
+  S.served = 0; S.cur=null;
+  genOffers();
+  // 파산 구제: 재고도 돈도 없으면 마왕의 비상금 지급
+  if (!S.inv.length && S.gold < Math.min(...S.offers.map(o=>o.cost))){
+    S.gold += 300;
+    setTimeout(()=>toast("😈 침대 밑에서 비상금 300G를 찾았다!"), 600);
+  }
+  save();
+  render();
+  if (!S.tut.buy) tutBuy();
+}
+
+function genOffers(){
+  const mt = maxTier();
+  const pool = ITEMS.filter(i=>i.t<=mt);
+  S.offers = [];
+  for (let k=0;k<9;k++){
+    // 상위 티어는 낮은 확률로
+    const it = wpick(pool, i => i.t===1? 5 : i.t===2? (mt>=2?2.4:0) : (mt>=3?1.1:0));
+    const disc = R(0.40,0.62);
+    const cost = Math.max(10, Math.round(it.base*(S.mult[it.cat]||1)*disc*(1-0.08*S.up.goblin)));
+    S.offers.push({id:it.id, cost, disc:Math.round((1-disc)*100), sold:false});
+  }
+}
+
+/* ─── 렌더: 매입 ─── */
+function renderBuy(){
+  showScr("scr-buy");
+  const g=$("#offer-grid"); g.innerHTML="";
+  S.offers.forEach((o,idx)=>{
+    const it=IT[o.id];
+    const d=document.createElement("div");
+    d.className="offer"+(o.sold?" sold-out":"");
+    d.innerHTML = `<span class="disc">-${o.disc}%</span>
+      <span class="e">${it.e}</span>
+      <div class="nm">${it.nm} <span class="tier-tag t${it.t}">T${it.t}</span></div>
+      <div class="meta">시세 ${fmt(value(it))}G</div>
+      <button class="buy" data-i="${idx}" ${S.gold<o.cost||S.inv.length>=invCap()||o.sold?"disabled":""}>${o.sold?"품절":fmt(o.cost)+"G 매입"}</button>`;
+    g.appendChild(d);
+  });
+  $$("#offer-grid .buy").forEach(b=> b.onclick = e=>{
+    const o=S.offers[+b.dataset.i];
+    if (o.sold || S.gold<o.cost || S.inv.length>=invCap()) return;
+    S.gold-=o.cost; S.dayStat.cost+=o.cost;
+    S.inv.push({id:o.id, cost:o.cost}); o.sold=true;
+    SND.buy(); bumpGold();
+    save(); renderBuy(); renderTop();
+  });
+  $("#buy-inv-n").textContent = `${S.inv.length}/${invCap()}`;
+  $("#buy-inv-cap").textContent = `${S.inv.length}/${invCap()}칸`;
+  renderInvGrid($("#buy-inv"), null);
+  $("#btn-refresh").disabled = S.refreshed || S.gold<100;
+  sticky([{label:"🕯️ 영업 시작 →", id:"btn-open-shop", fn:()=>{ if(!S.inv.length){toast("팔 물건이 하나도 없어요!"); return;} startSell(); }}]);
+  renderTop();
+}
+$("#btn-refresh").onclick = ()=>{
+  if (S.refreshed || S.gold<100) return;
+  S.gold-=100; S.refreshed=true; genOffers(); SND.click(); save(); renderBuy();
+};
+
+function renderInvGrid(root, onSel){
+  root.innerHTML="";
+  const cap=invCap();
+  for (let i=0;i<cap;i++){
+    const d=document.createElement("div");
+    const inv=S.inv[i];
+    if (inv){
+      const it=IT[inv.id];
+      d.className="slot"; d.dataset.idx=i;
+      if (S.cur && !S.cur.gone && S.cur.want!=="any" && it.cat===S.cur.want) d.classList.add("want");
+      if (S.selIdx===i) d.classList.add("sel");
+      d.innerHTML=`<span class="e">${it.e}</span><span class="p">${fmt(value(it))}G</span>`;
+      if (onSel) d.onclick=()=>onSel(i);
+    } else { d.className="slot empty"; d.innerHTML=`<span class="e" style="font-size:14px">·</span>`; }
+    root.appendChild(d);
+  }
+}
+
+/* ─── 영업 ─── */
+function startSell(){
+  S.phase="sell"; S.selIdx=null; S.cur=null; save();
+  renderSellFrame();
+  if (!S.tut.sell) tutSell(); else nextCustomer();
+}
+
+function genCust(){
+  const lv=repLv();
+  const c = wpick(CUSTS, t=>t.w[lv]);
+  const tol0 = R(c.tol[0], c.tol[1]);
+  let want = Math.random()<0.25 ? "any" : pick(c.cats);
+  // 진열창 효과: 취향과 겹치는 재고가 있으면 그 물건을 보고 들어온다
+  const stockCats = [...new Set(S.inv.map(v=>IT[v.id].cat))];
+  const overlap = c.cats.filter(x=>stockCats.includes(x));
+  if (want!=="any" && overlap.length && Math.random()<0.65) want = pick(overlap);
+  // 유행 카테고리 손님이 더 많이 찾음
+  if (want!=="any" && Math.random()<0.3 && c.cats.includes(S.hot)) want=S.hot;
+  const wantT = RI(1, Math.min(c.maxT, maxTier()));
+  return {
+    t:c, tol:tol0, want, wantT, pat:c.pat, greet:pick(c.greet),
+    counterUsed:false, gone:false, vip:!!c.vip,
+  };
+}
+function tolEff(cu, item){
+  let t = cu.tol * (1 + 0.07*S.up.book);
+  const cat = item? item.cat : cu.want;
+  if (cat===S.hot)  t *= S.buff.boom? 1.55 : 1.32;
+  if (cat===S.cold) t *= 0.86;
+  return t;
+}
+
+function nextCustomer(){
+  S.selIdx=null; S.cur=null;
+  $("#price-panel").classList.remove("on");
+  $("#counter-box").classList.remove("on");
+  if (S.served >= S.custN){ endSellPhase(); return; }
+  if (!S.inv.length){
+    renderSellFrame();
+    $("#cust-area").innerHTML = `<div class="cust-card" style="text-align:center; padding:30px 16px">
+      <div style="font-size:40px">🧹</div><p class="muted" style="margin:10px 0 0">재고가 모두 팔렸습니다! 완판이에요.</p></div>`;
+    unlockAch("soldout","완판! 재고를 모두 팔았다");
+    sticky([{label:"🌙 조기 마감하고 정산 →", id:"btn-early-close", fn:endSellPhase}]);
+    return;
+  }
+  S.cur = genCust();
+  save();
+  renderSell();
+}
+
+function renderSellFrame(){
+  showScr("scr-sell");
+  $("#sell-sub").textContent = `오늘 손님 ${S.custN}명`;
+  const dots = Array.from({length:S.custN},(_,i)=>`<i class="${i<S.served?"done":""}"></i>`).join("");
+  $("#queue-info").innerHTML = `손님 ${Math.min(S.served+1,S.custN)} / ${S.custN} <span class="qdots">${dots}</span>`;
+  $("#sell-inv-cap").textContent = `${S.inv.length}/${invCap()}칸`;
+  renderTop();
+}
+
+function custBubble(txt){
+  const b=$("#cust-bubble"); if (b) b.innerHTML=txt;
+}
+function heartsHtml(n){ return "❤️".repeat(Math.max(0,n)) + "🖤".repeat(Math.max(0, (S.cur?S.cur.t.pat:3) - n)); }
+
+function renderSell(){
+  renderSellFrame();
+  const cu=S.cur;
+  const wantTxt = cu.want==="any" ? "아무거나 좋은 물건" : `${CATS[cu.want].e} ${CATS[cu.want].nm}`;
+  $("#cust-area").innerHTML = `
+    <div class="cust-card" id="cust-card">
+      <div class="cust-top">
+        <div class="cust-face">${cu.t.e}</div>
+        <div class="cust-info">
+          <div class="cust-nm">${cu.t.nm}${cu.vip?'<span class="vip">VIP</span>':""}</div>
+          <div class="cust-tags">
+            <span class="chip">🛍️ <b>${wantTxt}</b></span>
+            <span class="chip hearts" id="cust-hearts">${heartsHtml(cu.pat)}</span>
+          </div>
+        </div>
+      </div>
+      <div class="bubble" id="cust-bubble">"${cu.greet}" <br><span class="muted" style="font-size:12.5px">— <em>${wantTxt}</em>${cu.want!=="any"?"을(를) 찾고 있다":""}</span></div>
+    </div>`;
+  renderInvGrid($("#sell-inv"), selectItem);
+  sticky([{label:"손님 보내기 😶", ghost:true, id:"btn-skip", fn:()=>{
+    SND.click(); custLeaves(0, `"${cu.t.nm}이(가) 조용히 가게를 나섰다."`);
+  }}]);
+}
+
+function selectItem(i){
+  if (!S.cur || S.cur.gone) return;
+  S.selIdx=i; SND.click();
+  const inv=S.inv[i], it=IT[inv.id];
+  renderInvGrid($("#sell-inv"), selectItem);
+  const pp=$("#price-panel"); pp.classList.add("on");
+  $("#counter-box").classList.remove("on");
+  $("#pp-e").textContent=it.e; $("#pp-nm").textContent=it.nm;
+  $("#pp-base").textContent=fmt(value(it)); $("#pp-cost").textContent=fmt(inv.cost);
+  const range=$("#price-range");
+  range.oninput=updatePrice;
+  updatePrice();
+  if (!S.tut.haggle){ S.tut.haggle=true; save();
+    toast("💡 가격을 정하고 '제안'을 눌러 흥정하세요"); }
+  pp.scrollIntoView({behavior:"smooth", block:"nearest"});
+}
+function updatePrice(){
+  const inv=S.inv[S.selIdx]; if (!inv) return;
+  const it=IT[inv.id], pct=+$("#price-range").value;
+  const price=Math.max(1, Math.round(value(it)*pct/100));
+  $("#pp-price").textContent = fmt(price)+"G";
+  $("#pp-pct").textContent = `시세의 ${pct}%`;
+  $$(".pp-presets button").forEach(b=> b.classList.toggle("on", +b.dataset.pct===pct));
+}
+$$(".pp-presets button").forEach(b=> b.onclick=()=>{ $("#price-range").value=b.dataset.pct; SND.click(); updatePrice(); });
+
+$("#btn-propose").onclick = ()=>{
+  if (S.selIdx==null || !S.cur || S.cur.gone) return;
+  const inv=S.inv[S.selIdx], it=IT[inv.id];
+  const price=Math.max(1, Math.round(value(it) * (+$("#price-range").value)/100));
+  propose(price);
+};
+
+function propose(price){
+  const cu=S.cur, inv=S.inv[S.selIdx], it=IT[inv.id];
+  const V=value(it), r=price/V, eff=tolEff(cu,it);
+  // 카테고리 불일치
+  if (cu.want!=="any" && it.cat!==cu.want){
+    cu.pat--;
+    $("#cust-card").classList.remove("shake"); void $("#cust-card").offsetWidth;
+    $("#cust-card").classList.add("shake");
+    $("#cust-hearts").innerHTML = heartsHtml(cu.pat);
+    SND.haggle();
+    if (cu.pat<=0){ custLeaves(-1, `"필요한 걸 안 보여주는군." ${cu.t.nm}이(가) 실망하며 떠났다.`); return; }
+    custBubble(`"음… 그건 내가 찾는 물건이 아니야. <em>${CATS[cu.want].nm}</em>은 없나?"`);
+    return;
+  }
+  // 티어 미달 (원하는 등급보다 낮으면 관대하게 허용하되 지갑 축소)
+  const tierPenalty = it.t < cu.wantT ? 0.85 : 1;
+  const effT = eff * tierPenalty;
+
+  if (r <= effT*0.92){
+    saleDone(price, 2, `"오, 이 가격에?! 바로 사겠소!"`);
+  } else if (r <= effT){
+    saleDone(price, 1, `"…좋아, 적당하군. 사지."`);
+  } else if (r <= effT*1.45 && !cu.counterUsed){
+    cu.counterUsed=true;
+    const cPrice=Math.max(1, Math.round(V*effT*R(0.80,0.93)));
+    cu.counterPrice=cPrice;
+    SND.haggle();
+    custBubble(`"흠, 너무 비싼데… <em>${fmt(cPrice)}G</em>면 사겠소."`);
+    const cb=$("#counter-box");
+    cb.classList.add("on");
+    cb.innerHTML = `<div style="font-size:13px; margin-bottom:4px">🤝 손님의 역제안</div>
+      <div class="cp">${fmt(cPrice)}G <span class="muted" style="font-size:12px; font-weight:600">(내 매입가 ${fmt(inv.cost)}G)</span></div>
+      <div class="sell-actions" style="margin-top:10px">
+        <button class="btn small" id="btn-accept-counter">✅ 수락하고 판매</button>
+        <button class="btn small ghost" id="btn-insist">🔁 가격 다시 제안</button>
+      </div>`;
+    $("#btn-accept-counter").onclick=()=> saleDone(cPrice, 1, `"거래 성사! 좋은 흥정이었소."`);
+    $("#btn-insist").onclick=()=>{ cb.classList.remove("on"); custBubble(`"…얼마면 되겠나. 마지막 기회요."`); toast("⚠️ 마지막 제안! 너무 비싸면 떠납니다"); };
+  } else if (cu.counterUsed && r <= effT*1.08){
+    saleDone(price, 0, `"…독하군. 하지만 물건은 좋으니, 사겠소."`);
+  } else {
+    custLeaves(-2, `"바가지를 씌우다니!" ${cu.t.nm}이(가) 화를 내며 떠났다. (평판 하락)`);
+    SND.angry();
+  }
+}
+
+function saleDone(price, happy, line){
+  const cu=S.cur, inv=S.inv[S.selIdx], it=IT[inv.id];
+  cu.gone=true;
+  S.inv.splice(S.selIdx,1); S.selIdx=null;
+  S.gold+=price;
+  S.dayStat.rev+=price; S.dayStat.sold++; S.total.rev+=price; S.total.sold++;
+  if (happy>=1) S.dayStat.happy++;
+  const repGain = Math.round(((happy===2?3: happy===1?2:1) + (cu.vip?2:0)) * (1+0.5*S.up.deco));
+  S.rep+=repGain; S.dayStat.repD+=repGain;
+  S.best = Math.max(S.best, price);
+  bumpGold(); (price>=800?SND.bigcoin:SND.coin)();
+  const card=$("#cust-card");
+  if (card){ const rc=card.getBoundingClientRect(); coinFx(rc.left+rc.width/2, rc.top+rc.height/2, price>=800?6:3); }
+  custBubble(`${line} <br><span class="muted" style="font-size:12px">+${fmt(price)}G · 평판 +${repGain}</span>`);
+  $("#price-panel").classList.remove("on");
+  $("#counter-box").classList.remove("on");
+  if (S.total.sold===1) unlockAch("first","첫 판매 달성!");
+  if (S.dayStat.rev>=3000) unlockAch("rev3000","하루 매출 3,000G 돌파");
+  if (cu.vip) unlockAch("vip","VIP 손님에게 판매");
+  S.served++;
+  renderInvGrid($("#sell-inv"), selectItem);
+  renderTop(); save();
+  sticky([]);
+  setTimeout(nextCustomer, 1100);
+}
+
+function custLeaves(repD, line){
+  const cu=S.cur; if (!cu || cu.gone) return;
+  cu.gone=true;
+  if (repD<0){ S.rep=Math.max(0,S.rep+repD*1); S.dayStat.repD+=repD; if (repD<=-2){ S.dayStat.angry++; } }
+  custBubble(`<span class="muted">${line}</span>`);
+  $("#price-panel").classList.remove("on");
+  $("#counter-box").classList.remove("on");
+  S.served++;
+  renderTop(); save();
+  sticky([]);
+  setTimeout(nextCustomer, 1000);
+}
+
+function endSellPhase(){
+  S.phase="report"; S.cur=null; save();
+  render();
+  if (!S.tut.report) tutReport();
+}
+
+/* ─── 정산 ─── */
+function renderReport(){
+  showScr("scr-report");
+  $("#report-sub").textContent = `Day ${S.day} 결과`;
+  const st=S.dayStat;
+  const profit = st.rev - st.cost;
+  $("#report-rows").innerHTML = `
+    <div class="rr"><span>💰 오늘 매출</span><b class="pos">+${fmt(st.rev)}G</b></div>
+    <div class="rr"><span>📦 매입 지출</span><b class="neg">−${fmt(st.cost)}G</b></div>
+    <div class="rr"><span>📈 순이익</span><b class="${profit>=0?"pos":"neg"}">${profit>=0?"+":"−"}${fmt(Math.abs(profit))}G</b></div>
+    <div class="rr"><span>🛍️ 판매 ${st.sold}건 · 😊 만족 ${st.happy} · 😡 분노 ${st.angry}</span><b class="${st.repD>=0?"pos":"neg"}">평판 ${st.repD>=0?"+":""}${st.repD}</b></div>`;
+  // 이벤트
+  const slot=$("#event-slot"); slot.innerHTML="";
+  if (!S.eventDone){ S.eventDone=true; rollEvent(slot); save(); }
+  renderDebt();
+  renderUpgrades();
+  sticky([{label: nextDayLabel(), id:"btn-next-day", fn:nextDay}]);
+  renderTop();
+}
+function nextDayLabel(){
+  const chk = INSTALLMENTS.find(i=>i.day===S.day);
+  if (!S.endless && chk) return `⚖️ 상환 심판의 날! 다음 날 → (${fmt(chk.amt)}G 필요)`;
+  return "🌅 다음 날 →";
+}
+function renderDebt(){
+  const left=debtLeft();
+  $("#debt-left").textContent = left<=0? "완납! 🎉" : fmt(left)+"G 남음";
+  $("#debt-bar").style.width = clamp(S.paid/DEBT_TOTAL*100,0,100)+"%";
+  const next = INSTALLMENTS.find(i=> S.paid < i.amt && i.day >= S.day);
+  const missed = INSTALLMENTS.find(i=> i.day===S.day && S.paid<i.amt);
+  if (S.endless || left<=0) $("#debt-next").innerHTML = "빚에서 해방된 자유로운 마왕! 이제 순수한 장사의 길.";
+  else if (missed) $("#debt-next").innerHTML = `⚠️ <b>오늘이 상환일!</b> 자정까지 누적 <b>${fmt(missed.amt)}G</b>를 갚지 못하면 상점이 압류됩니다.`;
+  else if (next) $("#debt-next").innerHTML = `다음 상환일: <b>Day ${next.day}</b>까지 누적 ${fmt(next.amt)}G (현재 ${fmt(S.paid)}G 상환)`;
+  $("#repay-1000").disabled = S.gold<1000 || left<=0;
+  $("#repay-half").disabled = S.gold<2 || left<=0;
+  $("#repay-max").disabled = S.gold<1 || left<=0;
+}
+function repay(amount){
+  const amt = Math.min(amount, S.gold, debtLeft());
+  if (amt<=0) return;
+  S.gold-=amt; S.paid+=amt;
+  SND.coin(); bumpGold();
+  toast(`💸 ${fmt(amt)}G 상환! (누적 ${fmt(S.paid)}G)`, true);
+  if (debtLeft()<=0){ SND.fanfare(); toast("🎉 빚 완납!!", true); unlockAch("debtfree","빚 30,000G 완납"); }
+  save(); renderDebt(); renderTop();
+  sticky([{label: nextDayLabel(), id:"btn-next-day", fn:nextDay}]);
+}
+$("#repay-1000").onclick=()=>repay(1000);
+$("#repay-half").onclick=()=>repay(Math.floor(S.gold/2));
+$("#repay-max").onclick=()=>repay(S.gold);
+
+function renderUpgrades(){
+  const g=$("#upg-grid"); g.innerHTML="";
+  Object.entries(UPG).forEach(([k,u])=>{
+    const lv=S.up[k], max=u.costs.length, done=lv>=max;
+    const cost=done?0:u.costs[lv];
+    const d=document.createElement("div"); d.className="upg";
+    d.innerHTML=`<span class="e">${u.e}</span>
+      <div class="body"><div class="nm">${u.nm} <span class="lv">${done?"MAX":`Lv.${lv}/${max}`}</span></div><div class="ds">${u.ds}</div></div>
+      <button class="btn small ${done?"ghost":""}" data-k="${k}" ${done||S.gold<cost?"disabled":""}>${done?"완료":fmt(cost)+"G"}</button>`;
+    g.appendChild(d);
+  });
+  $$("#upg-grid button").forEach(b=> b.onclick=()=>{
+    const k=b.dataset.k, u=UPG[k], lv=S.up[k];
+    if (lv>=u.costs.length || S.gold<u.costs[lv]) return;
+    S.gold-=u.costs[lv]; S.up[k]++;
+    SND.buy(); bumpGold();
+    toast(`🔨 ${u.nm} Lv.${S.up[k]}!`);
+    save(); renderUpgrades(); renderDebt(); renderTop();
+    sticky([{label: nextDayLabel(), id:"btn-next-day", fn:nextDay}]);
+  });
+}
+
+/* ─── 이벤트 ─── */
+function rollEvent(slot){
+  S.buff={festival:false, rain:false, boom:false};
+  if (Math.random()>0.62) return;
+  const lv=repLv();
+  const evts=[
+    {w:3, nm:"🌩️ 폭우 예보", tx:"내일은 비가 온다. 손님 발길이 줄어들 것이다… (내일 손님 −35%)",
+     fn:()=>{ S.buff.rain=true; }},
+    {w:3, nm:"🎪 마을 축제", tx:"내일 마을에 축제가 열린다! 손님이 몰려올 것이다. (내일 손님 +50%)",
+     fn:()=>{ S.buff.festival=true; }},
+    {w:3, nm:"🔥 유행 대폭발", tx:"음유시인이 노래를 퍼뜨렸다. 내일 유행 아이템의 인기가 치솟는다! (유행 보너스 대폭 증가)",
+     fn:()=>{ S.buff.boom=true; }},
+    {w:(S.up.safe||S.day<4)?(S.up.safe?1:0):3, nm:"🦹 밤도둑", tx:null, choice:false,
+     fn:()=>{
+       if (S.up.safe){ return {nm:"🦹 밤도둑…의 최후", tx:"밤중에 도둑이 들었지만, 미믹 금고가 맛있게 씹어먹었다. 피해 없음! 👍"}; }
+       const loss=Math.min(S.gold, 400, Math.max(80, Math.round(S.gold*0.10)));
+       S.gold-=loss;
+       return {nm:"🦹 밤도둑", tx:`밤사이 도둑이 금고를 털었다… <b class="gold">−${fmt(loss)}G</b> (미믹 금고를 사면 막을 수 있다)`};
+     }},
+    {w:2, nm:"🧝 순회 상인", tx:"신비한 순회 상인이 희귀한 물건을 헐값에 내놓았다.", choice:true,
+     make:()=>{
+       const mt=maxTier();
+       const pool=ITEMS.filter(i=> i.t===Math.min(3, mt+ (Math.random()<0.4?1:0)) );
+       const it=pick(pool.length?pool:ITEMS);
+       const cost=Math.round(it.base*0.45);
+       return {nm:"🧝 순회 상인", tx:`순회 상인이 <b>${it.e} ${it.nm}</b> <span class="muted">(시세 ${fmt(it.base)}G)</span>을 단돈 <b class="gold">${fmt(cost)}G</b>에 판다!`,
+         acts:[
+           {label:`💰 산다 (${fmt(cost)}G)`, fn:(el)=>{
+             if (S.gold<cost){ toast("골드가 부족해요!"); return; }
+             if (S.inv.length>=invCap()){ toast("재고 칸이 가득!"); return; }
+             S.gold-=cost; S.inv.push({id:it.id, cost}); SND.buy(); bumpGold();
+             el.innerHTML=`<div class="ti">🧝 순회 상인</div><div class="tx">"좋은 안목이군." — ${it.nm}을(를) 손에 넣었다!</div>`;
+             save(); renderTop();
+           }},
+           {label:"넘긴다", ghost:true, fn:(el)=>{ el.innerHTML=`<div class="ti">🧝 순회 상인</div><div class="tx">상인은 안개처럼 사라졌다…</div>`; }},
+         ]};
+     }},
+    {w:2, nm:"🕵️ 용사군 정찰병", tx:"정찰병이 가게를 기웃거린다. '이 가게… 수상한데?'", choice:true,
+     make:()=>{
+       const bribe=300+lv*200;
+       return {nm:"🕵️ 용사군 정찰병", tx:`용사군 정찰병이 가게 정체를 눈치챘다! 어떻게 할까?`,
+         acts:[
+           {label:`🤫 입막음 (${fmt(bribe)}G)`, fn:(el)=>{
+             if (S.gold<bribe){ toast("골드가 부족해요!"); return; }
+             S.gold-=bribe; SND.coin(); bumpGold();
+             el.innerHTML=`<div class="ti">🕵️ 정찰병</div><div class="tx">"…난 아무것도 못 봤다." 정찰병이 휘파람을 불며 사라졌다.</div>`;
+             save(); renderTop();
+           }},
+           {label:"😈 마왕의 눈빛으로 위협", ghost:true, fn:(el)=>{
+             if (Math.random()<0.55){
+               S.rep+=6;
+               el.innerHTML=`<div class="ti">🕵️ 정찰병</div><div class="tx">"히익—!!" 도망쳤다. 목격자들이 감탄했다. <b>평판 +6</b></div>`;
+             } else {
+               S.rep=Math.max(0,S.rep-8);
+               el.innerHTML=`<div class="ti">🕵️ 정찰병</div><div class="tx">"마, 마왕이다!!" 소문이 퍼졌다… <b>평판 −8</b></div>`;
+               SND.angry();
+             }
+             save(); renderTop();
+           }},
+         ]};
+     }},
+    {w: lv>=1?2:0, nm:"🏰 왕실 납품", tx:null, choice:false,
+     fn:()=>{
+       if (!S.inv.length) return {nm:"🏰 왕실 납품 제안", tx:"왕실 집사가 찾아왔지만, 팔 재고가 없어 아쉽게 돌아갔다."};
+       const idx=RI(0,S.inv.length-1);
+       const inv=S.inv[idx], it=IT[inv.id];
+       const p=Math.round(value(it)*1.35);
+       S.inv.splice(idx,1); S.gold+=p; S.rep+=3; S.total.rev+=p; S.total.sold++;
+       SND.bigcoin();
+       return {nm:"🏰 왕실 납품", tx:`왕실 집사가 <b>${it.e} ${it.nm}</b>을(를) 시세보다 후하게 사 갔다! <b class="gold">+${fmt(p)}G</b>, 평판 +3`};
+     }},
+  ];
+  const ev = wpick(evts.filter(e=>e.w>0), e=>e.w);
+  SND.event();
+  const card=document.createElement("div"); card.className="event-card"; slot.appendChild(card);
+  if (ev.choice){
+    const data=ev.make();
+    card.innerHTML=`<div class="ti">${data.nm}</div><div class="tx">${data.tx}</div>`;
+    const acts=document.createElement("div"); acts.className="acts"; card.appendChild(acts);
+    data.acts.forEach(a=>{
+      const b=document.createElement("button"); b.className="btn small"+(a.ghost?" ghost":""); b.textContent=a.label;
+      b.onclick=()=>a.fn(card);
+      acts.appendChild(b);
+    });
+  } else if (ev.fn){
+    const res=ev.fn() || {nm:ev.nm, tx:ev.tx};
+    card.innerHTML=`<div class="ti">${res.nm}</div><div class="tx">${res.tx}</div>`;
+    renderTop();
+  } else {
+    ev.fn && ev.fn();
+    card.innerHTML=`<div class="ti">${ev.nm}</div><div class="tx">${ev.tx}</div>`;
+  }
+}
+
+/* ─── 다음 날 / 엔딩 ─── */
+function nextDay(){
+  // 상환 체크
+  const chk = INSTALLMENTS.find(i=>i.day===S.day);
+  if (!S.endless && chk && S.paid < chk.amt){
+    gameOver(chk);
+    return;
+  }
+  if (!S.endless && S.day>=30){
+    if (S.paid>=DEBT_TOTAL) { ending(); return; }
+  }
+  S.day++;
+  startDay();
+}
+
+function ending(){
+  SND.fanfare();
+  showScr("scr-ending");
+  $("#topbar").style.display="none"; sticky([]);
+  $("#ending-txt").textContent = "30일 만에 빚 30,000G를 완납했다. 용사도, 왕국도, 이제 마왕상회의 단골일 뿐. 세계 정복? 이미 상권 정복으로 끝났다.";
+  $("#ending-stats").innerHTML = `
+    <div><b>${fmt(S.total.rev)}G</b><span>누적 매출</span></div>
+    <div><b>${S.total.sold}</b><span>판매 건수</span></div>
+    <div><b>${repInfo().nm}</b><span>최종 명성</span></div>`;
+  save();
+}
+$("#btn-endless").onclick=()=>{ S.endless=true; S.day++; save(); startDay(); };
+$("#btn-ending-restart").onclick=()=>{ wipe(); location.reload(); };
+
+function gameOver(chk){
+  SND.fail();
+  showScr("scr-gameover");
+  $("#topbar").style.display="none"; sticky([]);
+  $("#gameover-txt").textContent = `Day ${S.day} 상환일까지 누적 ${fmt(chk.amt)}G를 갚지 못했다 (상환액 ${fmt(S.paid)}G). 용사군이 들이닥쳐 상점을 압류했다… 하지만 마왕은 포기하지 않는다.`;
+  $("#gameover-stats").innerHTML = `
+    <div><b>${S.day}일</b><span>버틴 날</span></div>
+    <div><b>${fmt(S.total.rev)}G</b><span>누적 매출</span></div>
+    <div><b>${S.total.sold}</b><span>판매 건수</span></div>`;
+  wipe();
+}
+$("#btn-retry").onclick=()=>{ wipe(); location.reload(); };
+
+/* ─── 업적 ─── */
+function unlockAch(id, label){
+  if (S.ach && S.ach.includes(id)) return;
+  S.ach = S.ach||[];
+  S.ach.push(id);
+  toast(`🏅 업적 달성 — ${label}`, true);
+  save();
+}
+
+/* ─── 튜토리얼 ─── */
+function tutBuy(){
+  S.tut.buy=true; save();
+  modal(`<h3>👑 마왕님, 어서오세요!</h3>
+    <p style="font-size:14px; color:var(--muted)">용사에게 패배한 뒤, 마왕성 재건 자금 <b class="gold">30,000G</b>이 빚으로 남았습니다. <b>30일</b> 안에 갚아야 합니다.</p>
+    <p style="font-size:14px; color:var(--muted)">매일 아침 <b>시장에서 물건을 매입</b>하고, 낮에 <b>손님과 흥정해 판매</b>하고, 밤에 <b>정산·상환·투자</b>를 합니다.</p>
+    <p style="font-size:14px; color:var(--muted)">💡 상단의 <b>📈 유행</b> 카테고리는 손님들이 비싸게 사줍니다. 유행을 노려 매입하세요!</p>
+    <button class="btn" id="tut-ok">장사 시작! 🔥</button>`, {sticky:true});
+  $("#tut-ok").onclick=()=>{ SND.click(); closeModal(); };
+}
+function tutSell(){
+  S.tut.sell=true; save();
+  modal(`<h3>🕯️ 흥정의 기술</h3>
+    <p style="font-size:14px; color:var(--muted)">① 손님이 <b>원하는 카테고리</b>를 확인하고, 진열대에서 맞는 물건(<b style="color:var(--green)">!</b> 표시)을 누르세요.</p>
+    <p style="font-size:14px; color:var(--muted)">② 슬라이더로 가격을 정해 <b>제안</b>하세요. 싸면 바로 사고, 좀 비싸면 <b>역제안(흥정)</b>이 오고, 너무 비싸면 화내며 떠납니다.</p>
+    <p style="font-size:14px; color:var(--muted)">③ 부자 손님(귀족·공주·고룡)은 지갑이 큽니다. 배짱 가격도 통해요. 😈</p>
+    <button class="btn" id="tut-ok2">첫 손님 받기</button>`, {sticky:true});
+  $("#tut-ok2").onclick=()=>{ SND.click(); closeModal(); nextCustomer(); };
+}
+function tutReport(){
+  S.tut.report=true; save();
+  modal(`<h3>🌙 밤의 마왕은 CFO</h3>
+    <p style="font-size:14px; color:var(--muted)">번 돈으로 <b>빚을 상환</b>하세요. <b>Day 10 / 20 / 30</b>이 상환 심판의 날입니다. 그날까지 누적 상환액이 모자라면 <b style="color:var(--red)">상점 압류(게임 오버)</b>!</p>
+    <p style="font-size:14px; color:var(--muted)">남는 돈은 <b>상점 투자</b>에 쓰세요. 간판(손님↑), 진열대(재고↑), 흥정 마도서(지갑↑)가 초반 추천입니다.</p>
+    <button class="btn" id="tut-ok3">정산 확인</button>`, {sticky:true});
+  $("#tut-ok3").onclick=()=>{ SND.click(); closeModal(); };
+}
+
+/* ─── 메뉴 ─── */
+$("#tb-menu").onclick=()=>{
+  modal(`<h3>⚙️ 마왕의 집무실</h3>
+    <div class="rr"><span>🔊 사운드</span><b>${S.sound?"켜짐":"꺼짐"}</b></div>
+    <div class="rr"><span>🏅 업적</span><b>${(S.ach||[]).length} / 5</b></div>
+    <div class="rr"><span>💾 저장</span><b class="muted" style="font-weight:600">자동 (이 브라우저)</b></div>
+    <button class="btn ghost" id="mn-sound">사운드 ${S.sound?"끄기":"켜기"}</button>
+    <button class="btn danger" id="mn-reset">처음부터 다시 시작</button>
+    <button class="btn" id="mn-close">계속하기</button>`);
+  $("#mn-sound").onclick=()=>{ S.sound=!S.sound; save(); closeModal(); toast(S.sound?"🔊 사운드 켜짐":"🔇 사운드 꺼짐"); };
+  $("#mn-close").onclick=()=>{ SND.click(); closeModal(); };
+  $("#mn-reset").onclick=()=>{
+    modal(`<h3>⚠️ 정말 초기화할까요?</h3><p class="muted" style="font-size:13.5px">지금까지의 진행이 모두 사라집니다.</p>
+      <button class="btn danger" id="mn-reset2">네, 갈아엎습니다</button><button class="btn ghost" id="mn-back">취소</button>`);
+    $("#mn-reset2").onclick=()=>{ wipe(); location.reload(); };
+    $("#mn-back").onclick=closeModal;
+  };
+};
+
+/* ─── 렌더 디스패치 ─── */
+function render(){
+  renderTop();
+  if (S.phase==="buy") renderBuy();
+  else if (S.phase==="sell"){ renderSellFrame(); if (S.cur && !S.cur.gone) renderSell(); else nextCustomer(); }
+  else if (S.phase==="report") renderReport();
+}
+
+/* ─── 부팅 ─── */
+(function boot(){
+  const sv = loadSave();
+  if (sv && sv.v===1 && !sv.gameOver){
+    $("#btn-continue").style.display="";
+    $("#btn-continue").onclick=()=>{ S=sv; SND.click(); if (!S.mult || !Object.keys(S.mult).length){ startDay(); } else render(); };
+  }
+  $("#btn-new").onclick=()=>{
+    if (sv){ if (!confirm("기존 저장이 있습니다. 새로 시작하면 사라집니다. 계속할까요?")) return; }
+    wipe(); S=newState(); SND.click(); startDay();
+  };
+})();
+</script>
+</body>
+</html>
