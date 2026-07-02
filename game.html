@@ -1,0 +1,1515 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>용병단연대기 — 다크 판타지 용병단 경영 RPG</title>
+<meta name="description" content="계약, 전투, 그리고 생존. 이름 없는 용병단을 대륙 최고의 전설로 이끌어라. 브라우저에서 바로 즐기는 용병단 경영 턴제 RPG.">
+<meta property="og:title" content="용병단연대기 — Chronicles of the Free Company">
+<meta property="og:description" content="용병을 모으고, 의뢰를 완수하고, 검은 군단을 막아라. 30~60분의 캠페인, 자동 저장.">
+<meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚔️</text></svg>">
+<style>
+/* ============ 디자인 토큰 ============ */
+:root{
+  --bg:#0e0c09; --bg2:#14110d; --panel:#1c1813; --panel2:#252017; --panel3:#2e2820;
+  --line:#3b3226; --line2:#4d4232;
+  --ink:#ece0c8; --ink-dim:#c9bb9e; --muted:#98876c; --faint:#6e6250;
+  --gold:#d9a83c; --gold-soft:#f0cd7e; --gold-dim:#8a6f2e;
+  --red:#c8524a; --red-soft:#e8837b; --green:#8aab5e; --blue:#7fa7cd; --purple:#a98bc9;
+  --hp:#b8503f; --hp-bg:#3a1f1a;
+  --shadow:0 10px 30px rgba(0,0,0,.55);
+  --radius:12px;
+  --serif:"Iowan Old Style","Palatino Linotype","Noto Serif KR","Nanum Myeongjo",Georgia,serif;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","Pretendard","Noto Sans KR",Roboto,sans-serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  margin:0;background:var(--bg);color:var(--ink);
+  font:15px/1.6 var(--sans);
+  word-break:keep-all;overflow-wrap:break-word;
+  background-image:
+    radial-gradient(1200px 600px at 50% -10%, rgba(217,168,60,.05), transparent 60%),
+    radial-gradient(900px 500px at 90% 110%, rgba(200,82,74,.04), transparent 60%);
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,.serif{font-family:var(--serif)}
+button{font-family:inherit;cursor:pointer}
+input{font-family:inherit}
+::selection{background:rgba(217,168,60,.3)}
+
+/* ============ 공통 컴포넌트 ============ */
+#app{max-width:980px;margin:0 auto;min-height:100dvh;display:flex;flex-direction:column}
+.screen{display:none;flex:1;flex-direction:column;animation:fadeIn .35s ease}
+.screen.on{display:flex}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  background:var(--panel3);color:var(--ink);border:1px solid var(--line2);
+  border-radius:10px;padding:10px 18px;font-size:14px;font-weight:600;
+  transition:transform .06s ease, background .15s ease, border-color .15s ease;
+}
+.btn:hover{background:#37301f;border-color:var(--gold-dim)}
+.btn:active{transform:translateY(1px)}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.btn.gold{background:linear-gradient(180deg,#e3b44a,#b8862b);color:#241a06;border-color:#f0cd7e;font-weight:800;text-shadow:0 1px 0 rgba(255,255,255,.25)}
+.btn.gold:hover{filter:brightness(1.07)}
+.btn.red{background:linear-gradient(180deg,#a8443d,#7e2f2a);border-color:#c8746e;color:#ffe9e6}
+.btn.ghost{background:transparent}
+.btn.sm{padding:6px 12px;font-size:12.5px;border-radius:8px}
+.btn.block{width:100%}
+.tag{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.08em;padding:2px 8px;border-radius:999px;border:1px solid var(--line2);color:var(--muted);text-transform:uppercase}
+.panel{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:var(--radius);box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
+.gold-text{color:var(--gold)}
+.red-text{color:var(--red-soft)}
+.green-text{color:var(--green)}
+.muted{color:var(--muted)}
+.hr{border:0;border-top:1px solid var(--line);margin:14px 0}
+
+/* HP 바 */
+.bar{height:8px;background:var(--hp-bg);border-radius:99px;overflow:hidden;border:1px solid rgba(0,0,0,.4)}
+.bar>i{display:block;height:100%;background:linear-gradient(90deg,#d06a4c,var(--hp));border-radius:99px;transition:width .35s ease}
+.bar.xp>i{background:linear-gradient(90deg,#c9a743,#8a6f2e)}
+.bar.xp{background:#2b2517}
+
+/* ============ 타이틀 화면 ============ */
+#screen-title{align-items:center;justify-content:center;text-align:center;padding:24px}
+.title-emblem{font-size:56px;filter:drop-shadow(0 6px 18px rgba(217,168,60,.35));margin-bottom:6px}
+.title-tag{font-size:11px;letter-spacing:.42em;color:var(--gold-dim);text-transform:uppercase;margin:0 0 10px;font-weight:700}
+#screen-title h1{
+  font-size:64px;line-height:1.05;margin:0 0 14px;font-weight:800;letter-spacing:.02em;
+  background:linear-gradient(180deg,#f4e3b6 20%,var(--gold) 55%,#8a6f2e);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  text-shadow:0 18px 50px rgba(217,168,60,.15);
+}
+#screen-title h1 small{display:block;font-size:20px;letter-spacing:.55em;color:var(--muted);-webkit-text-fill-color:var(--muted);margin-top:6px;font-weight:600}
+.title-sub{color:var(--ink-dim);max-width:46ch;margin:0 auto 30px;font-size:15.5px}
+.title-form{display:flex;flex-direction:column;gap:12px;width:min(340px,88vw);margin:0 auto}
+.title-form input{
+  background:var(--panel);border:1px solid var(--line2);color:var(--ink);border-radius:10px;
+  padding:12px 16px;font-size:15px;text-align:center;outline:none;
+}
+.title-form input:focus{border-color:var(--gold-dim);box-shadow:0 0 0 3px rgba(217,168,60,.12)}
+.title-foot{margin-top:34px;font-size:12px;color:var(--faint)}
+
+/* ============ 상단바 & 탭 ============ */
+#topbar{
+  display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  padding:14px 18px;border-bottom:1px solid var(--line);
+  background:linear-gradient(180deg,rgba(28,24,19,.9),rgba(20,17,13,.6));
+  position:sticky;top:0;z-index:20;backdrop-filter:blur(6px);
+}
+#companyTitle{font-family:var(--serif);font-size:18px;font-weight:800;color:var(--gold-soft);letter-spacing:.02em;margin-right:auto}
+#companyTitle small{display:block;font-size:11px;color:var(--muted);font-weight:600;letter-spacing:.14em;font-family:var(--sans)}
+.res{display:flex;align-items:center;gap:6px;font-weight:700;font-size:14px;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:5px 13px}
+.res b{font-weight:800}
+.icon-btn{background:var(--panel);border:1px solid var(--line);color:var(--ink-dim);border-radius:999px;width:34px;height:34px;font-size:15px;display:inline-flex;align-items:center;justify-content:center}
+.icon-btn:hover{border-color:var(--gold-dim)}
+#tabs{display:flex;gap:4px;padding:10px 14px 0;border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none}
+#tabs::-webkit-scrollbar{display:none}
+.tab{
+  background:transparent;border:0;color:var(--muted);font-size:14px;font-weight:700;
+  padding:10px 16px 12px;border-bottom:2px solid transparent;white-space:nowrap;position:relative;
+}
+.tab:hover{color:var(--ink-dim)}
+.tab.on{color:var(--gold-soft);border-bottom-color:var(--gold)}
+.tab .dot{position:absolute;top:8px;right:6px;width:7px;height:7px;border-radius:50%;background:var(--red);box-shadow:0 0 6px var(--red)}
+#hub-content{padding:20px 18px 30px;flex:1}
+#hub-actions{position:sticky;bottom:0;padding:12px 18px calc(12px + env(safe-area-inset-bottom));background:linear-gradient(0deg,var(--bg) 55%,transparent);display:flex;gap:10px;justify-content:flex-end}
+
+/* ============ 카드 그리드 ============ */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+.card{padding:16px;position:relative}
+.card h3{margin:0;font-size:16.5px;color:var(--ink)}
+.merc-top{display:flex;gap:12px;align-items:center;margin-bottom:10px}
+.merc-face{
+  width:52px;height:52px;border-radius:12px;display:flex;align-items:center;justify-content:center;
+  font-size:28px;background:radial-gradient(circle at 30% 25%,var(--panel3),#151209);
+  border:1px solid var(--line2);flex-shrink:0;
+}
+.merc-cls{font-size:12px;color:var(--muted);font-weight:600}
+.trait{font-size:11.5px;color:var(--purple);font-weight:700}
+.stat-row{display:flex;gap:10px;font-size:12.5px;color:var(--ink-dim);margin:8px 0 4px;flex-wrap:wrap}
+.stat-row b{color:var(--ink)}
+.equip-row{display:flex;gap:6px;margin-top:8px;font-size:11.5px;color:var(--muted);flex-wrap:wrap}
+.equip-chip{border:1px dashed var(--line2);border-radius:8px;padding:2px 8px}
+.equip-chip.filled{border-style:solid;color:var(--gold-soft);border-color:var(--gold-dim)}
+.card-actions{display:flex;gap:8px;margin-top:12px}
+.injury-badge{position:absolute;top:12px;right:12px;font-size:11px;font-weight:800;color:#ffb0a8;background:#4a201c;border:1px solid #7e2f2a;padding:3px 9px;border-radius:999px}
+.lvl-badge{font-size:11px;font-weight:800;color:var(--gold-soft);background:#2e2510;border:1px solid var(--gold-dim);padding:2px 8px;border-radius:999px}
+
+/* 의뢰 카드 */
+.stars{color:var(--gold);letter-spacing:2px;font-size:13px}
+.contract-final{border-color:var(--gold-dim);background:linear-gradient(180deg,#2c2410,var(--panel));box-shadow:0 0 24px rgba(217,168,60,.12)}
+.enemy-preview{display:flex;gap:4px;font-size:19px;margin:8px 0}
+.reward-row{display:flex;gap:14px;font-size:13px;font-weight:700;margin-top:6px}
+
+/* ============ 전투 화면 ============ */
+#screen-battle{padding:0 14px 14px}
+#battle-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:14px 4px;border-bottom:1px solid var(--line);margin-bottom:12px}
+#battle-head h2{margin:0;font-size:18px;color:var(--gold-soft)}
+#battle-head .round{font-size:12.5px;color:var(--muted);font-weight:700;margin-right:auto}
+.units-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;padding:10px 0;min-height:132px}
+.unit{
+  width:118px;padding:10px 8px 12px;text-align:center;position:relative;
+  background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:12px;
+  transition:transform .15s ease, border-color .15s ease, box-shadow .15s ease, opacity .3s ease;
+}
+.unit .uface{font-size:32px;line-height:1.2;filter:drop-shadow(0 4px 8px rgba(0,0,0,.5))}
+.unit .uname{font-size:12px;font-weight:700;margin:4px 0 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.unit .uhp{font-size:10.5px;color:var(--muted);margin-top:4px;font-weight:700}
+.unit.active{border-color:var(--gold);box-shadow:0 0 0 2px rgba(217,168,60,.35),0 6px 20px rgba(217,168,60,.15);transform:translateY(-4px)}
+.unit.dead{opacity:.28;filter:grayscale(1)}
+.unit.targetable{cursor:pointer;border-color:var(--red);animation:pulse 1s infinite}
+.unit.targetable:hover{transform:scale(1.06)}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(200,82,74,.4)}50%{box-shadow:0 0 0 5px rgba(200,82,74,.12)}}
+.unit.hit{animation:shake .35s ease}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}50%{transform:translateX(4px)}75%{transform:translateX(-2px)}}
+.float-dmg{
+  position:absolute;left:50%;top:8px;transform:translateX(-50%);font-weight:900;font-size:17px;color:#ffd9d4;
+  text-shadow:0 2px 6px rgba(0,0,0,.8);pointer-events:none;animation:floatUp 1s ease forwards;z-index:5;white-space:nowrap;
+}
+.float-dmg.crit{color:#ffcf4d;font-size:20px}
+.float-dmg.heal{color:#a9e08a}
+@keyframes floatUp{0%{opacity:0;transform:translate(-50%,6px)}15%{opacity:1}100%{opacity:0;transform:translate(-50%,-30px)}}
+#battle-mid{display:flex;flex-direction:column;align-items:center;gap:10px;padding:6px 0 4px}
+#turn-label{font-size:13px;font-weight:800;color:var(--gold-soft);min-height:20px;font-family:var(--serif);letter-spacing:.04em}
+#action-bar{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;min-height:44px}
+#battle-log{
+  margin-top:10px;background:rgba(0,0,0,.28);border:1px solid var(--line);border-radius:10px;
+  padding:10px 14px;height:128px;overflow-y:auto;font-size:12.5px;line-height:1.75;color:var(--ink-dim);
+}
+#battle-log .turn-sep{color:var(--faint);font-size:11px;letter-spacing:.1em}
+#battle-log .em{color:var(--gold-soft);font-weight:700}
+#battle-log .bad{color:var(--red-soft)}
+#battle-log .good{color:var(--green)}
+.vs-divider{display:flex;align-items:center;gap:12px;color:var(--faint);font-size:11px;letter-spacing:.3em;font-weight:800;margin:2px 0}
+.vs-divider::before,.vs-divider::after{content:"";flex:1;height:1px;background:var(--line)}
+
+/* ============ 결과/엔딩 ============ */
+#screen-result,#screen-ending{align-items:center;justify-content:center;text-align:center;padding:30px 20px}
+.result-box{width:min(560px,94vw);padding:34px 28px}
+.result-box h2{font-size:30px;margin:0 0 4px}
+.result-box .sub{color:var(--muted);margin:0 0 20px;font-size:13.5px}
+.result-list{text-align:left;margin:18px 0;font-size:14px}
+.result-list li{margin:7px 0;list-style:none;padding-left:22px;position:relative}
+.result-list li::before{content:"◆";position:absolute;left:0;color:var(--gold-dim);font-size:10px;top:5px}
+.victory h2{color:var(--gold-soft)}
+.defeat h2{color:var(--red-soft)}
+.ending-stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:22px 0;text-align:left}
+.ending-stats .panel{padding:12px 16px}
+.ending-stats b{display:block;font-size:20px;color:var(--gold-soft);font-family:var(--serif)}
+.ending-stats span{font-size:11.5px;color:var(--muted);font-weight:700;letter-spacing:.06em}
+
+/* ============ 연대기 ============ */
+.chron{max-width:640px;margin:0 auto}
+.chron-entry{display:flex;gap:14px;padding:10px 0;border-bottom:1px solid rgba(59,50,38,.5);font-size:13.5px}
+.chron-day{flex-shrink:0;width:52px;color:var(--faint);font-weight:800;font-size:12px;text-align:right;padding-top:2px}
+.chron-entry.story{background:linear-gradient(90deg,rgba(217,168,60,.06),transparent);border-radius:8px;padding:12px 10px;margin:10px 0;border:1px solid rgba(217,168,60,.18)}
+.chron-entry.story .chron-text{font-family:var(--serif);color:var(--ink)}
+.chron-entry.story h4{margin:0 0 4px;color:var(--gold-soft);font-size:14.5px}
+
+/* ============ 모달/토스트 ============ */
+#modal-root{position:fixed;inset:0;z-index:100;display:none;align-items:center;justify-content:center;padding:18px}
+#modal-root.on{display:flex}
+#modal-root .backdrop{position:absolute;inset:0;background:rgba(5,4,2,.72);backdrop-filter:blur(3px);animation:fadeIn .2s}
+.modal{
+  position:relative;width:min(480px,94vw);max-height:86dvh;overflow-y:auto;
+  background:linear-gradient(180deg,var(--panel3),var(--panel));border:1px solid var(--line2);
+  border-radius:16px;padding:24px 22px;box-shadow:var(--shadow);animation:modalIn .25s ease;
+}
+@keyframes modalIn{from{opacity:0;transform:translateY(14px) scale(.98)}to{opacity:1;transform:none}}
+.modal h3{margin:0 0 6px;font-size:19px;color:var(--gold-soft)}
+.modal .modal-sub{color:var(--muted);font-size:13px;margin:0 0 16px}
+.modal-actions{display:flex;gap:10px;margin-top:18px}
+.modal-actions .btn{flex:1}
+.pick-list{display:flex;flex-direction:column;gap:8px}
+.pick-item{
+  display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);
+  border-radius:10px;background:var(--panel);cursor:pointer;transition:border-color .15s;text-align:left;color:var(--ink);font-size:13.5px;width:100%;
+}
+.pick-item:hover{border-color:var(--gold-dim)}
+.pick-item.selected{border-color:var(--gold);background:#2b240f}
+.pick-item .pi-face{font-size:22px}
+.pick-item .pi-meta{font-size:11.5px;color:var(--muted)}
+.pick-item:disabled{opacity:.45;cursor:not-allowed}
+#toast-root{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:200;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none}
+.toast{
+  background:#2b2517;border:1px solid var(--gold-dim);color:var(--ink);font-size:13px;font-weight:700;
+  padding:10px 18px;border-radius:999px;box-shadow:var(--shadow);animation:toastIn .25s ease;
+}
+.toast.bad{border-color:#7e2f2a;background:#33201d;color:#ffd9d4}
+@keyframes toastIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+.empty-note{text-align:center;color:var(--muted);padding:40px 10px;font-size:14px}
+.section-title{display:flex;align-items:baseline;gap:10px;margin:4px 0 14px}
+.section-title h2{margin:0;font-size:19px;color:var(--ink)}
+.section-title .muted{font-size:12.5px}
+
+@media (max-width:620px){
+  #screen-title h1{font-size:44px}
+  .grid{grid-template-columns:1fr}
+  .unit{width:96px}
+  .unit .uface{font-size:26px}
+  #companyTitle{width:100%}
+  .ending-stats{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ======== 타이틀 ======== -->
+  <section id="screen-title" class="screen">
+    <div class="title-emblem">⚔️</div>
+    <p class="title-tag">Chronicles of the Free Company</p>
+    <h1>용병단연대기<small>傭 兵 團 年 代 記</small></h1>
+    <p class="title-sub">낡은 검 두 자루와 빈 금고. 그대는 변경 마을 <b>재의 여울</b>에서 깃발을 올렸다.<br>용병을 모으고, 의뢰를 완수하고, 다가오는 <b class="red-text">검은 군단</b>으로부터 왕국을 지켜라.</p>
+    <div class="title-form">
+      <input id="companyName" placeholder="용병단의 이름 (예: 붉은 늑대단)" maxlength="12" autocomplete="off">
+      <button id="btnNew" class="btn gold block">⚑ 새로운 연대기 시작</button>
+      <button id="btnContinue" class="btn block" style="display:none">📜 이어서 하기</button>
+    </div>
+    <p class="title-foot">자동 저장 · 캠페인 30~60분 · 모바일 지원</p>
+  </section>
+
+  <!-- ======== 본진(허브) ======== -->
+  <section id="screen-hub" class="screen">
+    <header id="topbar">
+      <div id="companyTitle"></div>
+      <span class="res" title="골드">🪙 <b id="res-gold">0</b></span>
+      <span class="res" title="식량">🍞 <b id="res-food">0</b></span>
+      <span class="res" title="명성">🏅 <b id="res-rep">0</b></span>
+      <span class="res" title="일차">🌙 <b id="res-day">1일차</b></span>
+      <button class="icon-btn" id="btnSound" title="효과음">🔊</button>
+      <button class="icon-btn" id="btnHelp" title="도움말">❔</button>
+      <button class="icon-btn" id="btnMenu" title="메뉴">☰</button>
+    </header>
+    <nav id="tabs">
+      <button class="tab on" data-tab="roster">🛡️ 부대</button>
+      <button class="tab" data-tab="contracts" id="tab-contracts">📜 의뢰</button>
+      <button class="tab" data-tab="tavern">🍺 주점</button>
+      <button class="tab" data-tab="market">⚒️ 시장</button>
+      <button class="tab" data-tab="chronicle">📖 연대기</button>
+    </nav>
+    <main id="hub-content"></main>
+    <footer id="hub-actions">
+      <button class="btn" id="btnRest">🌙 하루 휴식 <span class="muted" style="font-weight:600;font-size:12px">(전원 회복)</span></button>
+    </footer>
+  </section>
+
+  <!-- ======== 전투 ======== -->
+  <section id="screen-battle" class="screen">
+    <div id="battle-head">
+      <h2 id="battle-title"></h2>
+      <span class="round" id="battle-round"></span>
+      <button class="btn sm" id="btnAuto">⚙ 자동 전투: <b id="autoState">꺼짐</b></button>
+      <button class="btn sm red" id="btnRetreat">🏳 후퇴</button>
+    </div>
+    <div class="units-row" id="enemies-row"></div>
+    <div class="vs-divider">VERSUS</div>
+    <div class="units-row" id="party-row"></div>
+    <div id="battle-mid">
+      <div id="turn-label"></div>
+      <div id="action-bar"></div>
+    </div>
+    <div id="battle-log"></div>
+  </section>
+
+  <!-- ======== 결과 ======== -->
+  <section id="screen-result" class="screen">
+    <div class="result-box panel" id="result-box"></div>
+  </section>
+
+  <!-- ======== 엔딩 ======== -->
+  <section id="screen-ending" class="screen">
+    <div class="result-box panel" id="ending-box"></div>
+  </section>
+
+  <div id="modal-root"><div class="backdrop"></div><div class="modal" id="modal-body"></div></div>
+  <div id="toast-root"></div>
+</div>
+
+<script>
+"use strict";
+/* =====================================================================
+   용병단연대기 v1.0 — 단일 파일 다크 판타지 용병단 경영 RPG
+   ===================================================================== */
+
+/* ---------- 유틸 ---------- */
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const rnd = n => Math.floor(Math.random() * n);
+const pick = a => a[rnd(a.length)];
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const fmt = n => n.toLocaleString('ko-KR');
+
+/* ---------- 사운드 (WebAudio 신스) ---------- */
+const SFX = (() => {
+  let ctx = null, on = true;
+  function ensure(){ if(!ctx){ try{ ctx = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ on = false; } } return ctx; }
+  function tone(freq, dur, type, vol, delay=0){
+    if(!on || !ensure()) return;
+    try{
+      const t = ctx.currentTime + delay;
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = type; o.frequency.setValueAtTime(freq, t);
+      g.gain.setValueAtTime(vol, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+      o.connect(g); g.connect(ctx.destination);
+      o.start(t); o.stop(t + dur + .02);
+    }catch(e){}
+  }
+  return {
+    get on(){ return on; }, toggle(){ on = !on; return on; },
+    click(){ tone(660, .07, 'triangle', .12); },
+    hit(){ tone(160, .12, 'sawtooth', .16); tone(90, .16, 'square', .1, .02); },
+    crit(){ tone(220, .1, 'sawtooth', .2); tone(440, .14, 'square', .14, .05); },
+    heal(){ tone(520, .12, 'sine', .14); tone(780, .18, 'sine', .12, .09); },
+    coin(){ tone(880, .08, 'triangle', .13); tone(1320, .1, 'triangle', .1, .06); },
+    win(){ [523,659,784,1047].forEach((f,i)=>tone(f, .22, 'triangle', .14, i*.13)); },
+    lose(){ [330,262,196].forEach((f,i)=>tone(f, .3, 'sawtooth', .12, i*.18)); },
+    levelup(){ [659,784,988,1319].forEach((f,i)=>tone(f, .16, 'square', .1, i*.09)); },
+  };
+})();
+
+/* ---------- 게임 데이터 ---------- */
+const CLASSES = {
+  warrior:{ name:'전사',   icon:'🛡️', hp:34, atk:8,  def:5, spd:4, wage:8,
+    growth:{hp:6, atk:1.6, def:0.7, spd:0.15},
+    skill:{ name:'강타', desc:'적 하나에게 180% 피해', cd:3, type:'strike', mult:1.8 } },
+  archer:{ name:'궁수',   icon:'🏹', hp:24, atk:9,  def:2, spd:7, wage:9,
+    growth:{hp:4, atk:1.9, def:0.3, spd:0.35},
+    skill:{ name:'연속 사격', desc:'적 하나를 두 번 공격 (각 85%)', cd:3, type:'double', mult:0.85 } },
+  mage:{   name:'마법사', icon:'🔮', hp:18, atk:11, def:1, spd:5, wage:12,
+    growth:{hp:3, atk:2.1, def:0.2, spd:0.2},
+    skill:{ name:'화염구', desc:'적 전체에 90% 피해', cd:4, type:'aoe', mult:0.9 } },
+  cleric:{ name:'성직자', icon:'✨', hp:22, atk:5,  def:3, spd:5, wage:11,
+    growth:{hp:4.5, atk:1.1, def:0.5, spd:0.2},
+    skill:{ name:'치유의 빛', desc:'아군 하나 최대 체력 40% 회복', cd:2, type:'heal', mult:0.4 } },
+  rogue:{  name:'도적',   icon:'🗡️', hp:22, atk:8,  def:2, spd:9, wage:10,
+    growth:{hp:3.5, atk:1.8, def:0.3, spd:0.45},
+    skill:{ name:'급소 찌르기', desc:'방어 무시 140% 피해 · 치명타율 +25%', cd:3, type:'pierce', mult:1.4 } },
+};
+const CLASS_KEYS = Object.keys(CLASSES);
+
+const NAMES = ['카일','로엔','미르','세라핀','한스','일리아','바크','테오','류센','아린','거트','올가','핀','브란','엘딘','로자','무영','단테','하르켄','이졸데','가렌','유나','발터','키라','오스틴','레나','드레이크','시엔','볼프','마리'];
+
+const TRAITS = [
+  { name:'용맹함',  desc:'공격력 +15%', atkMul:1.15 },
+  { name:'강골',    desc:'최대 체력 +20%', hpMul:1.2 },
+  { name:'날쌤',    desc:'속도 +2', spd:2 },
+  { name:'신중함',  desc:'방어력 +2', def:2 },
+  { name:'행운아',  desc:'치명타율 +10%', crit:10 },
+  { name:'대식가',  desc:'체력 +12% · 식량 소모 2배', hpMul:1.12, food:2 },
+  { name:'백전노장',desc:'경험치 획득 +25%', expMul:1.25 },
+  { name:'냉혈한',  desc:'공격력 +8% · 치명타율 +5%', atkMul:1.08, crit:5 },
+];
+
+const WEAPONS = [
+  { id:'w1', name:'철검',   icon:'🔪', atk:2, price:110 },
+  { id:'w2', name:'강철검', icon:'⚔️', atk:4, price:290 },
+  { id:'w3', name:'명장의 검', icon:'🗡️', atk:7, price:680 },
+];
+const ARMORS = [
+  { id:'a1', name:'가죽 갑옷', icon:'🎽', def:2, price:100 },
+  { id:'a2', name:'사슬 갑옷', icon:'⛓️', def:4, price:280 },
+  { id:'a3', name:'판금 갑옷', icon:'🛡️', def:6, price:620 },
+];
+
+const ENEMIES = {
+  rat:        { name:'거대 들쥐',   icon:'🐀', hp:10,  atk:3,  def:0, spd:6,  gold:9,   exp:10 },
+  wolf:       { name:'굶주린 늑대', icon:'🐺', hp:16,  atk:5,  def:0, spd:8,  gold:14,  exp:14 },
+  goblin:     { name:'고블린',     icon:'👺', hp:14,  atk:4,  def:1, spd:5,  gold:13,  exp:12 },
+  gobWarrior: { name:'고블린 전사', icon:'👺', hp:24,  atk:6,  def:2, spd:5,  gold:24,  exp:20 },
+  wolfAlpha:  { name:'우두머리 늑대',icon:'🐺', hp:30,  atk:7,  def:1, spd:9,  gold:30,  exp:26 },
+  bandit:     { name:'산적',       icon:'🥷', hp:26,  atk:7,  def:2, spd:6,  gold:27,  exp:22 },
+  banditBoss: { name:'산적 두목',   icon:'☠️', hp:48,  atk:9,  def:3, spd:6,  gold:62,  exp:45 },
+  orc:        { name:'오크 전사',   icon:'👹', hp:40,  atk:10, def:3, spd:5,  gold:46,  exp:40 },
+  orcShaman:  { name:'오크 주술사', icon:'🌀', hp:30,  atk:9,  def:1, spd:6,  gold:52,  exp:45 },
+  orcChief:   { name:'오크 족장',   icon:'👹', hp:75,  atk:12, def:4, spd:6,  gold:115, exp:85 },
+  wraith:     { name:'망령',       icon:'👻', hp:34,  atk:11, def:0, spd:10, gold:70,  exp:55 },
+  darkKnight: { name:'검은 기사',   icon:'🦹',  hp:62,  atk:13, def:6, spd:5,  gold:95,  exp:70 },
+  dreadLord:  { name:'군단주 카르가스', icon:'💀', hp:175, atk:15, def:6, spd:7, gold:420, exp:320, boss:true },
+};
+
+const CONTRACT_TIERS = [
+  { tier:1, minRep:0,  templates:[
+    { name:'창고의 쥐떼 소탕',   place:'재의 여울', enemies:['rat','rat','rat'] },
+    { name:'들개가 된 늑대 사냥', place:'북쪽 숲길', enemies:['wolf','wolf'] },
+    { name:'고블린 정찰대 격퇴', place:'낡은 방앗간', enemies:['goblin','goblin','rat'] },
+  ]},
+  { tier:2, minRep:10, templates:[
+    { name:'가도의 산적 소탕',   place:'왕의 가도', enemies:['bandit','bandit'] },
+    { name:'고블린 약탈단 요격', place:'변경 농장', enemies:['goblin','gobWarrior','goblin'] },
+    { name:'우두머리 늑대 사냥', place:'잿빛 계곡', enemies:['wolfAlpha','wolf','wolf'] },
+  ]},
+  { tier:3, minRep:25, templates:[
+    { name:'산적 소굴 섬멸',     place:'매부리 바위', enemies:['bandit','bandit','banditBoss'] },
+    { name:'오크 척후대 저지',   place:'국경 초소', enemies:['orc','orc'] },
+    { name:'폐광의 망령 정화',   place:'버려진 은광', enemies:['wraith','wraith'] },
+  ]},
+  { tier:4, minRep:50, templates:[
+    { name:'오크 전쟁단 요격',   place:'붉은 평원', enemies:['orc','orcShaman','orc'] },
+    { name:'오크 족장의 목',     place:'전쟁의 언덕', enemies:['orcChief','orc','orc'] },
+    { name:'검은 기사 순찰대',   place:'안개 습지', enemies:['darkKnight','wraith'] },
+  ]},
+];
+const FINAL_CONTRACT = {
+  id:'FINAL', final:true, tier:5, name:'검은 군단 본진 섬멸', place:'몰락한 왕성',
+  enemies:['dreadLord','darkKnight','darkKnight','wraith'],
+  desc:'왕실의 마지막 의뢰. 군단주 카르가스를 쓰러뜨려라.',
+};
+
+const STORY = [
+  { rep:0,  title:'서장 — 잿더미에서',
+    text:'왕국력 312년. 전쟁이 끝나고 검은 일자리를 잃었다. 그대는 변경 마을 재의 여울에서 낡은 깃발을 올렸다. 금고는 비었고, 이름은 아무도 모른다. 하지만 모든 전설은 쥐잡기 의뢰에서 시작하는 법이다.' },
+  { rep:10, title:'1장 — 소문',
+    text:'마을과 마을 사이, 상인들의 입에 용병단의 이름이 오르내리기 시작했다. 더 위험한 의뢰가, 더 무거운 금화 주머니와 함께 들어온다.' },
+  { rep:25, title:'2장 — 가도의 왕',
+    text:'왕의 가도를 틀어쥔 산적들. 놈들의 두목은 스스로를 "가도의 왕"이라 부른다. 상단들이 호위가 아닌 토벌을 의뢰하기 시작했다. 명성이란 결국 누군가의 목값으로 쌓이는 것.' },
+  { rep:50, title:'3장 — 전운',
+    text:'북쪽 국경 너머에서 오크 전쟁단의 북소리가 들려온다. 국경군은 수가 모자라고, 왕실은 용병단의 깃발을 기억해냈다. 이제 놀이가 아니다. 전쟁이다.' },
+  { rep:80, title:'종장 — 검은 군단',
+    text:'몰락한 기사단이 망령의 군세를 이끌고 남하한다. 군단주 카르가스 — 한때 왕국 제일의 기사였던 자. 왕실의 마지막 의뢰가 도착했다. 이 계약서에 서명하면, 돌아오지 못할 수도 있다.', unlock:'final' },
+];
+
+const EVENTS = [
+  { id:'merchant', title:'떠돌이 상인', text:'포장마차의 상인이 치유 물약 3개를 60골드에 팔겠다고 한다. 시세보다 싸다.',
+    choices:[
+      { label:'구입한다 (-60🪙, +3🧪)', can:s=>s.gold>=60, fx:s=>{ s.gold-=60; s.potions+=3; return '물약 3개를 손에 넣었다.'; } },
+      { label:'보낸다', fx:()=>'상인은 어깨를 으쓱하고 떠났다.' },
+    ]},
+  { id:'wounded', title:'다친 용병', text:'전장에서 버려진 용병 하나가 합류를 청한다. 몸값은 필요 없지만, 부상이 나을 때까지 이틀은 싸울 수 없어 보인다.',
+    choices:[
+      { label:'받아준다 (무료 영입)', can:s=>s.roster.length<8, fx:s=>{ const m=makeMerc(pick(CLASS_KEYS),1+rnd(2)); m.injury=2; m.hp=Math.floor(mercStats(m).hp*0.4); s.roster.push(m); return `${m.name}(${CLASSES[m.cls].name})이(가) 붕대를 감은 채 깃발 아래 섰다.`; } },
+      { label:'거절한다', fx:()=>'용병은 말없이 절뚝이며 떠났다.' },
+    ]},
+  { id:'village', title:'굶주린 마을', text:'흉년이 든 마을 사람들이 식량을 구걸한다. 식량 5를 나누면 용병단의 이름이 퍼질 것이다.',
+    choices:[
+      { label:'기부한다 (-5🍞, +5🏅)', can:s=>s.food>=5, fx:s=>{ s.food-=5; addRep(5); return '마을 사람들이 용병단의 이름을 기억하기로 했다.'; } },
+      { label:'거절한다', fx:()=>'배고픈 눈길을 뒤로하고 지나쳤다.' },
+    ]},
+  { id:'gamble', title:'주사위 도박판', text:'주점 뒷방에서 도박판이 벌어졌다. 50골드를 걸면 두 배가 될 수도, 사라질 수도 있다.',
+    choices:[
+      { label:'건다 (-50🪙, 50%)', can:s=>s.gold>=50, fx:s=>{ if(Math.random()<0.5){ s.gold+=50; SFX.coin(); return '주사위가 웃었다! +100골드.'; } s.gold-=50; return '주사위는 냉정했다. 50골드를 잃었다.'; } },
+      { label:'물러난다', fx:()=>'도박은 용병의 적이다. 현명한 선택.' },
+    ]},
+  { id:'trainer', title:'퇴역 교관', text:'왕국군 출신 교관이 하루 훈련을 제안한다. 80골드에 단원 하나를 단련시켜 준다고 한다.',
+    choices:[
+      { label:'고용한다 (-80🪙, 무작위 단원 EXP+45)', can:s=>s.gold>=80&&s.roster.length>0, fx:s=>{ s.gold-=80; const m=pick(s.roster); gainExp(m,45); return `${m.name}의 눈빛이 달라졌다. (경험치 +45)`; } },
+      { label:'거절한다', fx:()=>'교관은 아쉬운 듯 검집을 두드리며 떠났다.' },
+    ]},
+  { id:'thief', title:'밤손님', text:'새벽, 보초의 외침. 도둑이 창고를 뒤지고 달아났다.', auto:true,
+    choices:[ { label:'…', fx:s=>{ const g=Math.min(s.gold,25); s.gold-=g; return `골드 ${g}을(를) 도둑맞았다. 보초를 더 세워야겠다.`; } } ]},
+  { id:'pilgrim', title:'순례자의 축복', text:'지나가던 순례자가 물 한 잔의 답례로 부대를 축복해 주었다.', auto:true,
+    choices:[ { label:'…', fx:s=>{ s.roster.forEach(m=>{ if(!m.injury) m.hp=mercStats(m).hp; }); SFX.heal(); return '전원의 체력이 회복되었다.'; } } ]},
+];
+
+/* ---------- 상태 ---------- */
+const SAVE_KEY = 'mercChronicleSave_v1';
+let S = null;          // 게임 상태
+let B = null;          // 전투 상태
+let mercSeq = 1;
+
+function newState(name){
+  return {
+    v:1, company:name, day:1, gold:300, food:14, rep:0, potions:2,
+    roster:[], candidates:[], contracts:[], chron:[],
+    stats:{ battles:0, wins:0, kills:0, goldEarned:0, fallen:0 },
+    storySeen:[], finalUnlocked:false, won:false, freePlay:false,
+    lastAidDay:-99, sound:true,
+  };
+}
+
+/* ---------- 용병 ---------- */
+function makeMerc(cls, lvl=1){
+  const m = { id:mercSeq++, name:pick(NAMES), cls, lvl, exp:0,
+    trait:rnd(4)===0?null:pick(TRAITS), weapon:null, armor:null, injury:0, hp:0 };
+  // 이름 중복 방지
+  if(S){ let guard=0; while(S.roster.concat(S.candidates).some(x=>x!==m&&x.name===m.name)&&guard++<40) m.name=pick(NAMES); }
+  m.hp = mercStats(m).hp;
+  return m;
+}
+function mercStats(m){
+  const c = CLASSES[m.cls], g = c.growth, L = m.lvl-1, t = m.trait||{};
+  let hp  = Math.round((c.hp + g.hp*L) * (t.hpMul||1));
+  let atk = Math.round((c.atk + g.atk*L) * (t.atkMul||1)) + (m.weapon?m.weapon.atk:0);
+  let def = Math.round(c.def + g.def*L) + (t.def||0) + (m.armor?m.armor.def:0);
+  let spd = Math.round(c.spd + g.spd*L) + (t.spd||0);
+  let crit = 5 + (m.cls==='rogue'?10:0) + (t.crit||0);
+  return { hp, atk, def, spd, crit };
+}
+function expNeed(lvl){ return 30 + lvl*25; }
+function gainExp(m, amount){
+  if(m.lvl>=10) return [];
+  const t=m.trait||{};
+  m.exp += Math.round(amount * (t.expMul||1));
+  const ups=[];
+  while(m.lvl<10 && m.exp>=expNeed(m.lvl)){
+    m.exp-=expNeed(m.lvl);
+    const oldHp=mercStats(m).hp;
+    m.lvl++;
+    m.hp=clamp(m.hp+(mercStats(m).hp-oldHp), 1, mercStats(m).hp);
+    ups.push(m.lvl);
+  }
+  return ups;
+}
+function mercWage(m){ return CLASSES[m.cls].wage + (m.lvl-1); }
+function mercFood(m){ return (m.trait&&m.trait.food)||1; }
+function hireCost(m){ return 50 + (m.lvl-1)*45 + 10*rnd(4); }
+
+/* ---------- 의뢰 ---------- */
+let contractSeq = 1;
+function genContracts(){
+  const avail = CONTRACT_TIERS.filter(t=>S.rep>=t.minRep);
+  const list = [];
+  const topTier = avail[avail.length-1];
+  // 최고 티어 1~2개 보장 + 그 아래 티어 섞기
+  const count = 3 + rnd(2);
+  for(let i=0;i<count;i++){
+    const t = i===0 ? topTier : pick(avail);
+    const tpl = pick(t.templates);
+    const enemies = tpl.enemies.slice();
+    const sum = enemies.reduce((a,k)=>a+ENEMIES[k].gold,0);
+    const exp = enemies.reduce((a,k)=>a+ENEMIES[k].exp,0);
+    list.push({
+      id:contractSeq++, tier:t.tier, name:tpl.name, place:tpl.place, enemies,
+      reward: Math.round((30 + sum*2 * (0.9+Math.random()*0.3))/5)*5,
+      rep: t.tier*3 + rnd(3),
+      exp,
+    });
+  }
+  S.contracts = list;
+  if(S.finalUnlocked && !S.won){
+    const sum = FINAL_CONTRACT.enemies.reduce((a,k)=>a+ENEMIES[k].gold,0);
+    S.contracts.unshift({ ...FINAL_CONTRACT, id:'FINAL', reward:30+sum*2, rep:30,
+      exp:FINAL_CONTRACT.enemies.reduce((a,k)=>a+ENEMIES[k].exp,0) });
+  }
+}
+
+/* ---------- 연대기 ---------- */
+function chron(text, story){ S.chron.unshift({ day:S.day, text, story:story||null }); }
+function checkStory(){
+  STORY.forEach(ch=>{
+    if(S.rep>=ch.rep && !S.storySeen.includes(ch.title)){
+      S.storySeen.push(ch.title);
+      chron(ch.text, ch.title);
+      if(ch.unlock==='final'){ S.finalUnlocked=true; genContracts(); }
+      if(ch.rep>0){
+        openModal(`
+          <h3>📖 ${ch.title}</h3>
+          <p style="font-family:var(--serif);line-height:1.85;color:var(--ink-dim)">${ch.text}</p>
+          ${ch.unlock==='final'?'<p class="gold-text" style="font-weight:800">⚑ 최종 의뢰가 의뢰판에 게시되었다.</p>':''}
+          <div class="modal-actions"><button class="btn gold" onclick="G.closeModal()">계속</button></div>`);
+      }
+    }
+  });
+}
+function addRep(n){ S.rep=Math.max(0,S.rep+n); checkStory(); }
+
+/* ---------- 저장/불러오기 ---------- */
+function save(){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify(S)); }catch(e){} }
+function load(){
+  try{
+    const raw = localStorage.getItem(SAVE_KEY);
+    if(!raw) return null;
+    const s = JSON.parse(raw);
+    if(!s || s.v!==1 || !Array.isArray(s.roster)) return null;
+    mercSeq = Math.max(1,...s.roster.concat(s.candidates||[]).map(m=>m.id+1), 1);
+    contractSeq = Math.max(1,...(s.contracts||[]).filter(c=>c.id!=='FINAL').map(c=>c.id+1), 1);
+    return s;
+  }catch(e){ return null; }
+}
+
+/* ---------- 화면 전환 ---------- */
+function show(id){
+  $$('.screen').forEach(el=>el.classList.remove('on'));
+  $(id).classList.add('on');
+  window.scrollTo(0,0);
+}
+
+/* ---------- 토스트/모달 ---------- */
+function toast(msg, bad){
+  const el = document.createElement('div');
+  el.className = 'toast'+(bad?' bad':'');
+  el.textContent = msg;
+  $('#toast-root').appendChild(el);
+  setTimeout(()=>{ el.style.opacity='0'; el.style.transition='opacity .4s'; setTimeout(()=>el.remove(),400); }, 2200);
+}
+function openModal(html, locked){
+  $('#modal-body').innerHTML = html;
+  $('#modal-root').classList.add('on');
+  $('#modal-root').dataset.locked = locked?'1':'';
+}
+function closeModal(){ $('#modal-root').classList.remove('on'); }
+$('#modal-root').querySelector('.backdrop').addEventListener('click', ()=>{
+  if($('#modal-root').dataset.locked!=='1') closeModal();
+});
+
+/* ---------- 허브 렌더링 ---------- */
+let curTab = 'roster';
+function renderTop(){
+  $('#companyTitle').innerHTML = `${S.company}<small>FREE COMPANY · ${S.won?'전설':'명성 '+repTitle()}</small>`;
+  $('#res-gold').textContent = fmt(S.gold);
+  $('#res-food').textContent = fmt(S.food);
+  $('#res-rep').textContent = fmt(S.rep);
+  $('#res-day').textContent = S.day + '일차';
+  $('#btnSound').textContent = SFX.on ? '🔊' : '🔇';
+}
+function repTitle(){
+  if(S.rep>=80) return '★★★★★';
+  if(S.rep>=50) return '★★★★';
+  if(S.rep>=25) return '★★★';
+  if(S.rep>=10) return '★★';
+  return '★';
+}
+function renderHub(){
+  renderTop();
+  const c = $('#hub-content');
+  if(curTab==='roster') c.innerHTML = viewRoster();
+  else if(curTab==='contracts') c.innerHTML = viewContracts();
+  else if(curTab==='tavern') c.innerHTML = viewTavern();
+  else if(curTab==='market') c.innerHTML = viewMarket();
+  else c.innerHTML = viewChronicle();
+  // 최종 의뢰 알림 점
+  $('#tab-contracts').innerHTML = '📜 의뢰' + (S.finalUnlocked&&!S.won?'<span class="dot"></span>':'');
+  save();
+}
+$$('#tabs .tab').forEach(b=>b.addEventListener('click',()=>{
+  SFX.click();
+  $$('#tabs .tab').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');
+  curTab = b.dataset.tab;
+  renderHub();
+}));
+
+function hpBar(cur,max,xp){ return `<div class="bar${xp?' xp':''}"><i style="width:${clamp(max?cur/max*100:0,0,100)}%"></i></div>`; }
+
+function viewRoster(){
+  if(!S.roster.length) return `<p class="empty-note">부대가 비어 있다.<br>🍺 <b>주점</b>에서 용병을 영입하라.</p>`;
+  const wage = S.roster.reduce((a,m)=>a+mercWage(m),0);
+  const food = S.roster.reduce((a,m)=>a+mercFood(m),0);
+  return `
+  <div class="section-title"><h2>부대 명부</h2><span class="muted">${S.roster.length}/8명 · 일일 급여 ${wage}🪙 · 식량 ${food}🍞 · 물약 ${S.potions}🧪</span></div>
+  <div class="grid">${S.roster.map(m=>{
+    const st = mercStats(m), c = CLASSES[m.cls];
+    return `<div class="card panel">
+      ${m.injury>0?`<span class="injury-badge">🩸 부상 ${m.injury}일</span>`:''}
+      <div class="merc-top">
+        <div class="merc-face">${c.icon}</div>
+        <div>
+          <h3>${m.name} <span class="lvl-badge">Lv.${m.lvl}</span></h3>
+          <div class="merc-cls">${c.name} · 급여 ${mercWage(m)}🪙/일</div>
+          ${m.trait?`<div class="trait">✦ ${m.trait.name} — ${m.trait.desc}</div>`:'<div class="trait muted">✦ 특성 없음</div>'}
+        </div>
+      </div>
+      ${hpBar(m.hp, st.hp)}
+      <div class="stat-row">
+        <span>❤️ <b>${m.hp}</b>/${st.hp}</span><span>⚔️ <b>${st.atk}</b></span>
+        <span>🛡 <b>${st.def}</b></span><span>💨 <b>${st.spd}</b></span><span>🎯 <b>${st.crit}%</b></span>
+      </div>
+      ${m.lvl<10?hpBar(m.exp, expNeed(m.lvl), true):'<div class="muted" style="font-size:11px">최고 레벨</div>'}
+      <div class="muted" style="font-size:11px;margin-top:2px">${m.lvl<10?`EXP ${m.exp}/${expNeed(m.lvl)}`:''} · 스킬: ${c.skill.name}</div>
+      <div class="equip-row">
+        <span class="equip-chip ${m.weapon?'filled':''}">${m.weapon?m.weapon.icon+' '+m.weapon.name:'무기 없음'}</span>
+        <span class="equip-chip ${m.armor?'filled':''}">${m.armor?m.armor.icon+' '+m.armor.name:'방어구 없음'}</span>
+      </div>
+      <div class="card-actions">
+        <button class="btn sm" onclick="G.fireMerc(${m.id})">해고</button>
+      </div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+function viewContracts(){
+  const able = S.roster.filter(m=>m.injury<=0).length;
+  return `
+  <div class="section-title"><h2>의뢰판</h2><span class="muted">출전 가능 ${able}명 · 의뢰 수행 시 하루가 지난다</span></div>
+  ${!S.contracts.length?'<p class="empty-note">오늘은 새 의뢰가 없다. 하루 휴식하면 의뢰판이 갱신된다.</p>':''}
+  <div class="grid">${S.contracts.map(ct=>{
+    const stars = '★'.repeat(ct.tier)+'☆'.repeat(5-ct.tier);
+    return `<div class="card panel ${ct.final?'contract-final':''}">
+      <h3>${ct.final?'⚑ ':''}${ct.name}</h3>
+      <div class="muted" style="font-size:12px">${ct.place} · <span class="stars">${stars}</span></div>
+      <div class="enemy-preview">${ct.enemies.map(k=>ENEMIES[k].icon).join('')}</div>
+      <div class="muted" style="font-size:12px">${ct.enemies.map(k=>ENEMIES[k].name).join(', ')}</div>
+      ${ct.final?`<div style="font-size:12.5px;color:var(--red-soft);margin-top:6px;font-weight:700">${ct.desc}</div>`:''}
+      <div class="reward-row"><span class="gold-text">🪙 ${fmt(ct.reward)}</span><span>🏅 +${ct.rep}</span><span class="muted">EXP ${ct.exp}</span></div>
+      <div class="card-actions">
+        <button class="btn sm gold" onclick="G.openDeploy('${ct.id}')" ${able?'':'disabled'}>⚔ 출정</button>
+      </div>
+    </div>`;
+  }).join('')}</div>
+  ${able===0&&S.roster.length?'<p class="empty-note">전원이 부상 상태다. 🌙 하루 휴식으로 회복하라.</p>':''}`;
+}
+
+function viewTavern(){
+  return `
+  <div class="section-title"><h2>주점 — 영입</h2><span class="muted">후보는 매일 바뀐다 · 부대 정원 8명</span></div>
+  <div class="grid">${S.candidates.map(m=>{
+    const st = mercStats(m), c = CLASSES[m.cls], cost = m.cost;
+    return `<div class="card panel">
+      <div class="merc-top">
+        <div class="merc-face">${c.icon}</div>
+        <div>
+          <h3>${m.name} <span class="lvl-badge">Lv.${m.lvl}</span></h3>
+          <div class="merc-cls">${c.name} · 급여 ${mercWage(m)}🪙/일</div>
+          ${m.trait?`<div class="trait">✦ ${m.trait.name} — ${m.trait.desc}</div>`:'<div class="trait muted">✦ 특성 없음</div>'}
+        </div>
+      </div>
+      <div class="stat-row">
+        <span>❤️ <b>${st.hp}</b></span><span>⚔️ <b>${st.atk}</b></span>
+        <span>🛡 <b>${st.def}</b></span><span>💨 <b>${st.spd}</b></span>
+      </div>
+      <div class="muted" style="font-size:11.5px">스킬: ${c.skill.name} — ${c.skill.desc}</div>
+      <div class="card-actions">
+        <button class="btn sm gold" onclick="G.hire(${m.id})">🪙 ${cost} 영입</button>
+      </div>
+    </div>`;
+  }).join('')}</div>
+  ${!S.candidates.length?'<p class="empty-note">오늘은 주점이 한산하다. 내일 다시 와 보자.</p>':''}`;
+}
+
+function viewMarket(){
+  const itemCard = (it, kind) => `
+    <div class="card panel">
+      <h3>${it.icon} ${it.name}</h3>
+      <div class="muted" style="font-size:12.5px;margin:4px 0 8px">${kind==='w'?`공격력 +${it.atk}`:`방어력 +${it.def}`}</div>
+      <button class="btn sm gold" onclick="G.buyEquip('${kind}','${it.id}')">🪙 ${it.price} 구입</button>
+    </div>`;
+  return `
+  <div class="section-title"><h2>시장</h2><span class="muted">장비는 구입 즉시 단원에게 장착 · 기존 장비는 반값에 처분</span></div>
+  <div class="grid">
+    ${WEAPONS.map(w=>itemCard(w,'w')).join('')}
+    ${ARMORS.map(a=>itemCard(a,'a')).join('')}
+    <div class="card panel">
+      <h3>🧪 치유 물약</h3>
+      <div class="muted" style="font-size:12.5px;margin:4px 0 8px">전투 중 체력 25 회복 · 보유 ${S.potions}개</div>
+      <button class="btn sm gold" onclick="G.buyPotion()">🪙 30 구입</button>
+    </div>
+    <div class="card panel">
+      <h3>🍞 식량 꾸러미</h3>
+      <div class="muted" style="font-size:12.5px;margin:4px 0 8px">식량 10 · 보유 ${S.food} · 매일 인원수만큼 소모</div>
+      <button class="btn sm gold" onclick="G.buyFood()">🪙 25 구입</button>
+    </div>
+  </div>`;
+}
+
+function viewChronicle(){
+  return `
+  <div class="section-title"><h2>연대기</h2><span class="muted">용병단의 역사가 여기 기록된다</span></div>
+  <div class="chron">
+    ${S.chron.map(e=>e.story
+      ? `<div class="chron-entry story"><div class="chron-day">${e.day}일차</div><div><h4>${e.story}</h4><div class="chron-text">${e.text}</div></div></div>`
+      : `<div class="chron-entry"><div class="chron-day">${e.day}일차</div><div>${e.text}</div></div>`
+    ).join('')}
+  </div>`;
+}
+
+/* ---------- 주점/시장 로직 ---------- */
+function genCandidates(){
+  const n = 2+rnd(2);
+  S.candidates = [];
+  const maxLvl = clamp(1+Math.floor(S.rep/18), 1, 5);
+  for(let i=0;i<n;i++){
+    const m = makeMerc(pick(CLASS_KEYS), 1+rnd(maxLvl));
+    m.cost = hireCost(m);
+    S.candidates.push(m);
+  }
+}
+
+const G = {
+  closeModal,
+  hire(id){
+    const m = S.candidates.find(x=>x.id===id); if(!m) return;
+    if(S.roster.length>=8) return toast('부대 정원(8명)이 가득 찼다', true);
+    if(S.gold<m.cost) return toast('골드가 부족하다', true);
+    S.gold-=m.cost; SFX.coin();
+    S.candidates = S.candidates.filter(x=>x!==m);
+    delete m.cost;
+    S.roster.push(m);
+    chron(`${m.name}(${CLASSES[m.cls].name})이(가) 부대에 합류했다.`);
+    toast(`${m.name} 영입!`);
+    renderHub();
+  },
+  fireMerc(id){
+    const m = S.roster.find(x=>x.id===id); if(!m) return;
+    openModal(`
+      <h3>해고 — ${m.name}</h3>
+      <p class="modal-sub">${CLASSES[m.cls].name} Lv.${m.lvl}. 장비는 회수되지 않는다. 정말 내보낼까?</p>
+      <div class="modal-actions">
+        <button class="btn" onclick="G.closeModal()">취소</button>
+        <button class="btn red" onclick="G.fireMercDo(${m.id})">해고한다</button>
+      </div>`);
+  },
+  fireMercDo(id){
+    const m = S.roster.find(x=>x.id===id); if(!m) return;
+    S.roster = S.roster.filter(x=>x!==m);
+    chron(`${m.name}이(가) 부대를 떠났다.`);
+    closeModal(); renderHub(); toast(`${m.name} 해고`);
+  },
+  buyPotion(){
+    if(S.gold<30) return toast('골드가 부족하다', true);
+    S.gold-=30; S.potions++; SFX.coin(); renderHub(); toast('치유 물약 구입 (+1🧪)');
+  },
+  buyFood(){
+    if(S.gold<25) return toast('골드가 부족하다', true);
+    S.gold-=25; S.food+=10; SFX.coin(); renderHub(); toast('식량 구입 (+10🍞)');
+  },
+  buyEquip(kind, itemId){
+    const it = (kind==='w'?WEAPONS:ARMORS).find(x=>x.id===itemId); if(!it) return;
+    if(S.gold<it.price) return toast('골드가 부족하다', true);
+    if(!S.roster.length) return toast('장착할 단원이 없다', true);
+    openModal(`
+      <h3>${it.icon} ${it.name} — 누구에게?</h3>
+      <p class="modal-sub">${kind==='w'?`공격력 +${it.atk}`:`방어력 +${it.def}`} · 가격 ${it.price}🪙 · 기존 장비는 반값 처분</p>
+      <div class="pick-list">
+        ${S.roster.map(m=>{
+          const cur = kind==='w'?m.weapon:m.armor;
+          const same = cur && cur.id===it.id;
+          return `<button class="pick-item" ${same?'disabled':''} onclick="G.buyEquipDo('${kind}','${it.id}',${m.id})">
+            <span class="pi-face">${CLASSES[m.cls].icon}</span>
+            <span><b>${m.name}</b> Lv.${m.lvl} ${CLASSES[m.cls].name}<br>
+            <span class="pi-meta">현재: ${cur?cur.icon+' '+cur.name:'없음'}${same?' (동일 장비)':''}</span></span>
+          </button>`;
+        }).join('')}
+      </div>
+      <div class="modal-actions"><button class="btn" onclick="G.closeModal()">취소</button></div>`);
+  },
+  buyEquipDo(kind, itemId, mercId){
+    const it = (kind==='w'?WEAPONS:ARMORS).find(x=>x.id===itemId);
+    const m = S.roster.find(x=>x.id===mercId);
+    if(!it||!m) return;
+    if(S.gold<it.price) return toast('골드가 부족하다', true);
+    S.gold-=it.price;
+    const old = kind==='w'?m.weapon:m.armor;
+    if(old){ S.gold+=Math.floor(old.price/2); toast(`${old.name} 처분 (+${Math.floor(old.price/2)}🪙)`); }
+    if(kind==='w') m.weapon={...it}; else m.armor={...it};
+    m.hp = clamp(m.hp, 1, mercStats(m).hp);
+    SFX.coin();
+    chron(`${m.name}이(가) ${it.name}을(를) 장착했다.`);
+    closeModal(); renderHub(); toast(`${m.name} — ${it.name} 장착!`);
+  },
+
+  /* ----- 출정 ----- */
+  openDeploy(ctId){
+    const ct = S.contracts.find(c=>String(c.id)===String(ctId)); if(!ct) return;
+    const able = S.roster.filter(m=>m.injury<=0);
+    if(!able.length) return toast('출전 가능한 단원이 없다', true);
+    const pre = able.slice(0,4).map(m=>m.id);
+    openModal(`
+      <h3>⚔ 출정 — ${ct.name}</h3>
+      <p class="modal-sub">최대 4명 선택 · 상대: ${ct.enemies.map(k=>ENEMIES[k].icon+ENEMIES[k].name).join(' · ')}</p>
+      <div class="pick-list" id="deploy-list">
+        ${able.map(m=>{
+          const st=mercStats(m);
+          return `<button class="pick-item ${pre.includes(m.id)?'selected':''}" data-mid="${m.id}" onclick="G.toggleDeploy(this)">
+            <span class="pi-face">${CLASSES[m.cls].icon}</span>
+            <span><b>${m.name}</b> Lv.${m.lvl} ${CLASSES[m.cls].name}<br>
+            <span class="pi-meta">❤️${m.hp}/${st.hp} ⚔️${st.atk} 🛡${st.def} 💨${st.spd}</span></span>
+          </button>`;
+        }).join('')}
+      </div>
+      <div class="modal-actions">
+        <button class="btn" onclick="G.closeModal()">취소</button>
+        <button class="btn gold" onclick="G.startBattleFromDeploy('${ctId}')">전투 개시</button>
+      </div>`);
+  },
+  toggleDeploy(el){
+    SFX.click();
+    if(el.classList.contains('selected')){ el.classList.remove('selected'); return; }
+    if($$('#deploy-list .pick-item.selected').length>=4) return toast('최대 4명까지 출전할 수 있다', true);
+    el.classList.add('selected');
+  },
+  startBattleFromDeploy(ctId){
+    const ids = $$('#deploy-list .pick-item.selected').map(el=>Number(el.dataset.mid));
+    if(!ids.length) return toast('한 명 이상 선택하라', true);
+    const ct = S.contracts.find(c=>String(c.id)===String(ctId)); if(!ct) return;
+    closeModal();
+    startBattle(ct, ids);
+  },
+};
+window.G = G;
+
+/* =====================================================================
+   전투 엔진
+   ===================================================================== */
+function startBattle(contract, mercIds){
+  const units = [];
+  mercIds.forEach(id=>{
+    const m = S.roster.find(x=>x.id===id); if(!m) return;
+    const st = mercStats(m);
+    units.push({ uid:'m'+m.id, side:'party', ref:m, name:m.name, icon:CLASSES[m.cls].icon,
+      cls:m.cls, hp:m.hp, maxhp:st.hp, atk:st.atk, def:st.def, spd:st.spd, crit:st.crit,
+      cd:0, alive:m.hp>0 });
+  });
+  const counts = {};
+  contract.enemies.forEach((k,i)=>{
+    const e = ENEMIES[k];
+    counts[k]=(counts[k]||0)+1;
+    const dup = contract.enemies.filter(x=>x===k).length>1;
+    units.push({ uid:'e'+i, side:'enemy', ekey:k, name:e.name+(dup?' '+counts[k]:''), icon:e.icon,
+      hp:e.hp, maxhp:e.hp, atk:e.atk, def:e.def, spd:e.spd, crit:5, cd:0, alive:true, boss:!!e.boss, enraged:false });
+  });
+  B = { contract, units, round:0, queue:[], qi:-1, active:null, pending:null, over:false,
+        auto:false, logEl:$('#battle-log'), started:Date.now() };
+  $('#battle-title').textContent = (contract.final?'⚑ ':'')+contract.name;
+  $('#autoState').textContent = '꺼짐';
+  $('#battle-log').innerHTML = '';
+  blog(`<span class="em">${contract.place}</span> — ${contract.name}. 전투 개시!`, true);
+  show('#screen-battle');
+  newRound();
+}
+function blog(html, sep){
+  const d = document.createElement('div');
+  if(sep) d.className='turn-sep';
+  d.innerHTML = html;
+  B.logEl.appendChild(d);
+  B.logEl.scrollTop = B.logEl.scrollHeight;
+}
+function alive(side){ return B.units.filter(u=>u.alive && u.side===side); }
+function newRound(){
+  if(B.over) return;
+  B.round++;
+  $('#battle-round').textContent = `ROUND ${B.round}`;
+  if(B.round>1) blog(`— ${B.round}번째 교전 —`, true);
+  B.queue = B.units.filter(u=>u.alive).sort((a,b)=> b.spd-a.spd || (a.side==='party'?-1:1));
+  B.qi = -1;
+  nextTurn();
+}
+function nextTurn(){
+  if(B.over) return;
+  if(checkBattleEnd()) return;
+  B.qi++;
+  if(B.qi >= B.queue.length){
+    B.units.forEach(u=>{ if(u.cd>0) u.cd--; });
+    return newRound();
+  }
+  const u = B.queue[B.qi];
+  if(!u.alive) return nextTurn();
+  B.active = u; B.pending = null;
+  renderBattle();
+  if(u.side==='enemy') setTimeout(()=>{ if(!B.over) enemyAct(u); }, 620);
+  else if(B.auto) setTimeout(()=>{ if(!B.over) autoAct(u); }, 380);
+  /* else: 플레이어 입력 대기 */
+}
+function unitCard(u){
+  const skillReady = u.side==='party' && u.cd<=0;
+  return `<div class="unit ${u.alive?'':'dead'} ${B.active===u?'active':''}" id="unit-${u.uid}" data-uid="${u.uid}">
+    <div class="uface">${u.icon}</div>
+    <div class="uname">${u.name}</div>
+    ${hpBar(u.hp,u.maxhp)}
+    <div class="uhp">${u.alive?`${u.hp}/${u.maxhp}`:'전투 불능'}${u.side==='party'&&u.alive?(skillReady?' · 스킬 ✓':` · 스킬 ${u.cd}턴`):''}</div>
+  </div>`;
+}
+function renderBattle(){
+  $('#enemies-row').innerHTML = B.units.filter(u=>u.side==='enemy').map(unitCard).join('');
+  $('#party-row').innerHTML   = B.units.filter(u=>u.side==='party').map(unitCard).join('');
+  const u = B.active;
+  const label = $('#turn-label'), bar = $('#action-bar');
+  if(B.over){ label.textContent=''; bar.innerHTML=''; return; }
+  if(!u){ label.textContent=''; bar.innerHTML=''; return; }
+  if(u.side==='enemy'){
+    label.textContent = `${u.name}의 차례…`;
+    bar.innerHTML = '';
+    return;
+  }
+  if(B.auto){ label.textContent = `${u.name} — 자동 전투 중`; bar.innerHTML=''; return; }
+  const sk = CLASSES[u.cls].skill;
+  if(!B.pending){
+    label.textContent = `${u.name}의 차례 — 행동을 선택하라`;
+    bar.innerHTML = `
+      <button class="btn sm" onclick="G.battleAction('attack')">⚔️ 공격</button>
+      <button class="btn sm ${u.cd<=0?'gold':''}" ${u.cd<=0?'':'disabled'} onclick="G.battleAction('skill')" title="${sk.desc}">✦ ${sk.name}${u.cd>0?` (${u.cd})`:''}</button>
+      <button class="btn sm" ${S.potions>0?'':'disabled'} onclick="G.battleAction('potion')">🧪 물약 (${S.potions})</button>
+      <button class="btn sm ghost" onclick="G.battleAction('wait')">⏳ 대기</button>`;
+  } else {
+    const targetSide = (B.pending==='heal'||B.pending==='potion') ? 'party' : 'enemy';
+    label.textContent = B.pending==='potion' ? '물약을 마실 대상을 선택하라'
+      : B.pending==='heal' ? '치유할 아군을 선택하라' : '목표를 선택하라';
+    bar.innerHTML = `<button class="btn sm ghost" onclick="G.battleAction('cancel')">↩ 취소</button>`;
+    alive(targetSide).forEach(t=>{
+      const el = $('#unit-'+t.uid);
+      if(el){ el.classList.add('targetable'); el.onclick = ()=>execPlayer(t); }
+    });
+  }
+}
+G.battleAction = function(act){
+  const u = B.active; if(!u || u.side!=='party' || B.over) return;
+  SFX.click();
+  if(act==='cancel'){ B.pending=null; return renderBattle(); }
+  if(act==='wait'){ blog(`${u.name}은(는) 숨을 고른다.`); return setTimeout(nextTurn, 300); }
+  if(act==='attack'){ B.pending='attack'; return renderBattle(); }
+  if(act==='potion'){ if(S.potions<=0) return; B.pending='potion'; return renderBattle(); }
+  if(act==='skill'){
+    if(u.cd>0) return;
+    const sk = CLASSES[u.cls].skill;
+    if(sk.type==='heal'){ B.pending='heal'; return renderBattle(); }
+    if(sk.type==='aoe'){ return execAoe(u); }
+    B.pending='skill'; return renderBattle();
+  }
+};
+function execPlayer(target){
+  const u = B.active; if(!u||B.over) return;
+  const p = B.pending; B.pending = null;
+  if(p==='attack') doAttack(u, target, 1, {});
+  else if(p==='skill'){
+    const sk = CLASSES[u.cls].skill;
+    u.cd = sk.cd;
+    if(sk.type==='strike') doAttack(u, target, sk.mult, {skill:sk.name});
+    else if(sk.type==='double'){ doAttack(u, target, sk.mult, {skill:sk.name}); if(target.alive) setTimeout(()=>{ if(!B.over&&target.alive) doAttack(u,target,sk.mult,{quiet:true}); }, 260); }
+    else if(sk.type==='pierce') doAttack(u, target, sk.mult, {skill:sk.name, pierce:true, critBonus:25});
+  }
+  else if(p==='heal'){
+    const sk = CLASSES[u.cls].skill; u.cd = sk.cd;
+    const amt = Math.round(target.maxhp*sk.mult);
+    healUnit(target, amt);
+    blog(`<span class="em">${u.name}</span>의 ${sk.name}! ${target.name}이(가) <span class="good">${amt}</span> 회복.`);
+  }
+  else if(p==='potion'){
+    S.potions--; healUnit(target, 25);
+    blog(`${u.name}이(가) ${target.name}에게 물약을 먹였다. <span class="good">+25</span>`);
+    SFX.heal();
+  }
+  renderBattle();
+  setTimeout(nextTurn, 620);
+}
+function execAoe(u){
+  const sk = CLASSES[u.cls].skill;
+  u.cd = sk.cd; B.pending=null;
+  blog(`<span class="em">${u.name}</span>의 ${sk.name}이 적진을 휩쓴다!`);
+  alive('enemy').forEach((t,i)=> setTimeout(()=>{ if(t.alive) doAttack(u,t,sk.mult,{quiet:true}); }, i*180));
+  setTimeout(nextTurn, 200 + alive('enemy').length*180 + 420);
+}
+function doAttack(att, tgt, mult, opts){
+  if(!tgt.alive) return;
+  const critChance = (att.crit||5) + (opts.critBonus||0);
+  const crit = Math.random()*100 < critChance;
+  let raw = att.atk * (0.85 + Math.random()*0.3) * mult * (crit?1.5:1);
+  let dmg = Math.max(1, Math.round(raw - (opts.pierce?0:tgt.def*0.6)));
+  tgt.hp = Math.max(0, tgt.hp - dmg);
+  crit ? SFX.crit() : SFX.hit();
+  floatText(tgt, (crit?'✸ ':'')+dmg, crit?'crit':'');
+  const el = $('#unit-'+tgt.uid); if(el) el.classList.add('hit');
+  if(!opts.quiet){
+    const skillTxt = opts.skill?`의 <span class="em">${opts.skill}</span>`:'의 공격';
+    blog(`${att.side==='party'?`<span class="em">${att.name}</span>`:att.name}${skillTxt} → ${tgt.name}에게 <span class="${att.side==='party'?'em':'bad'}">${dmg}</span> 피해${crit?' <span class="bad">치명타!</span>':''}`);
+  } else {
+    blog(`　↳ ${tgt.name}에게 ${dmg} 피해${crit?' (치명타!)':''}`);
+  }
+  if(tgt.hp<=0){
+    tgt.alive=false;
+    blog(tgt.side==='enemy' ? `<span class="good">${tgt.name}을(를) 쓰러뜨렸다!</span>` : `<span class="bad">${tgt.name}이(가) 쓰러졌다!</span>`);
+    if(tgt.side==='enemy') S.stats.kills++;
+  }
+  syncBattleHp();
+}
+function healUnit(u, amt){
+  if(!u.alive) return;
+  u.hp = clamp(u.hp+amt, 1, u.maxhp);
+  floatText(u, '+'+amt, 'heal');
+  SFX.heal();
+  syncBattleHp();
+}
+function floatText(u, text, cls){
+  const el = $('#unit-'+u.uid); if(!el) return;
+  const f = document.createElement('div');
+  f.className = 'float-dmg '+(cls||'');
+  f.textContent = text;
+  el.appendChild(f);
+  setTimeout(()=>f.remove(), 1000);
+}
+function syncBattleHp(){
+  B.units.forEach(u=>{
+    const el = $('#unit-'+u.uid); if(!el) return;
+    el.classList.toggle('dead', !u.alive);
+    const bar = el.querySelector('.bar>i'); if(bar) bar.style.width = clamp(u.hp/u.maxhp*100,0,100)+'%';
+    const hp = el.querySelector('.uhp'); if(hp) hp.textContent = u.alive?`${u.hp}/${u.maxhp}`:'전투 불능';
+  });
+}
+function enemyAct(u){
+  if(B.over||!u.alive) return;
+  const targets = alive('party');
+  if(!targets.length) return checkBattleEnd() || nextTurn();
+  // 40%는 체력이 가장 낮은 아군 노림
+  const tgt = Math.random()<0.4 ? targets.slice().sort((a,b)=>a.hp-b.hp)[0] : pick(targets);
+  let mult = 1;
+  if(u.boss && u.hp < u.maxhp/2){
+    mult = 1.5;
+    if(!u.enraged){ u.enraged=true; blog(`<span class="bad">💀 ${u.name}이(가) 암흑의 힘을 해방한다!</span>`); }
+  }
+  doAttack(u, tgt, mult, {});
+  setTimeout(nextTurn, 560);
+}
+function autoAct(u){
+  if(B.over||!u.alive) return;
+  const sk = CLASSES[u.cls].skill;
+  const enemies = alive('enemy');
+  if(!enemies.length) return checkBattleEnd() || nextTurn();
+  const lowAlly = alive('party').slice().sort((a,b)=>a.hp/a.maxhp-b.hp/b.maxhp)[0];
+  if(sk.type==='heal' && u.cd<=0 && lowAlly && lowAlly.hp < lowAlly.maxhp*0.6){
+    u.cd = sk.cd;
+    const amt = Math.round(lowAlly.maxhp*sk.mult);
+    healUnit(lowAlly, amt);
+    blog(`<span class="em">${u.name}</span>의 ${sk.name}! ${lowAlly.name}이(가) <span class="good">${amt}</span> 회복.`);
+    return setTimeout(nextTurn, 560);
+  }
+  const tgt = enemies.slice().sort((a,b)=>a.hp-b.hp)[0];
+  if(u.cd<=0 && sk.type!=='heal'){
+    u.cd = sk.cd;
+    if(sk.type==='aoe' && enemies.length>1) return execAoe(u);
+    if(sk.type==='double'){ doAttack(u,tgt,sk.mult,{skill:sk.name}); if(tgt.alive) setTimeout(()=>{ if(!B.over&&tgt.alive) doAttack(u,tgt,sk.mult,{quiet:true}); },240); }
+    else doAttack(u, tgt, sk.mult, {skill:sk.name, pierce:sk.type==='pierce', critBonus:sk.type==='pierce'?25:0});
+  } else {
+    doAttack(u, tgt, 1, {});
+  }
+  setTimeout(nextTurn, 560);
+}
+function checkBattleEnd(){
+  if(B.over) return true;
+  if(!alive('enemy').length){ B.over=true; setTimeout(()=>endBattle(true), 800); return true; }
+  if(!alive('party').length){ B.over=true; setTimeout(()=>endBattle(false), 800); return true; }
+  return false;
+}
+$('#btnAuto').addEventListener('click', ()=>{
+  if(!B||B.over) return;
+  B.auto = !B.auto;
+  $('#autoState').textContent = B.auto?'켜짐':'꺼짐';
+  SFX.click();
+  if(B.auto && B.active && B.active.side==='party' && !B.pending) autoAct(B.active);
+  else renderBattle();
+});
+$('#btnRetreat').addEventListener('click', ()=>{
+  if(!B||B.over) return;
+  openModal(`
+    <h3>🏳 후퇴</h3>
+    <p class="modal-sub">의뢰는 실패하고 명성 -1. 부대는 현재 상태 그대로 귀환한다.</p>
+    <div class="modal-actions">
+      <button class="btn" onclick="G.closeModal()">계속 싸운다</button>
+      <button class="btn red" onclick="G.retreatDo()">후퇴한다</button>
+    </div>`);
+});
+G.retreatDo = function(){
+  closeModal();
+  if(!B||B.over) return;
+  B.over = true;
+  endBattle(false, true);
+};
+
+/* ---------- 전투 종료/결과 ---------- */
+function endBattle(victory, retreat){
+  const ct = B.contract;
+  // 체력/부상 반영
+  const partyUnits = B.units.filter(u=>u.side==='party');
+  const injuredNames = [], fallenFlavor = [];
+  partyUnits.forEach(u=>{
+    const m = u.ref;
+    m.hp = u.alive ? u.hp : 0;
+    if(!u.alive){
+      m.injury = 2 + rnd(2);
+      m.hp = 1;
+      injuredNames.push(m.name);
+      S.stats.fallen++;
+    }
+  });
+  S.stats.battles++;
+  const lines = [];
+  let levelUps = [];
+  if(victory){
+    S.stats.wins++;
+    S.gold += ct.reward;
+    S.stats.goldEarned += ct.reward;
+    addRep(ct.rep);
+    lines.push(`보수 <b class="gold-text">${fmt(ct.reward)}🪙</b> 획득`);
+    lines.push(`명성 <b>+${ct.rep}🏅</b>`);
+    // 경험치
+    partyUnits.forEach(u=>{
+      const ups = gainExp(u.ref, ct.exp);
+      ups.forEach(lv=>levelUps.push(`${u.ref.name} — Lv.${lv} 달성!`));
+    });
+    lines.push(`참전 단원 경험치 <b>+${ct.exp}</b>`);
+    if(Math.random()<0.3){ S.potions++; lines.push('전리품: 치유 물약 <b>+1🧪</b>'); }
+    chron(`「${ct.name}」 의뢰 완수. 보수 ${fmt(ct.reward)}골드.`);
+    SFX.win();
+  } else {
+    addRep(retreat?-1:-3);
+    lines.push(retreat?'후퇴 — 명성 <b class="red-text">-1🏅</b>':'의뢰 실패 — 명성 <b class="red-text">-3🏅</b>');
+    chron(retreat?`「${ct.name}」에서 후퇴했다.`:`「${ct.name}」 의뢰에 실패했다.`);
+    SFX.lose();
+  }
+  if(injuredNames.length) lines.push(`부상: <b class="red-text">${injuredNames.join(', ')}</b> (며칠간 출전 불가)`);
+  levelUps.forEach(t=>lines.push(`<b class="gold-text">⬆ ${t}</b>`));
+  if(levelUps.length) SFX.levelup();
+
+  // 최종전 승리 → 엔딩
+  if(victory && ct.final){
+    S.won = true;
+    chron('검은 군단이 무너졌다. 군단주 카르가스는 재가 되어 흩어졌다.', '에필로그 — 전설');
+    save();
+    return showEnding();
+  }
+  // 의뢰 소모 + 하루 경과
+  S.contracts = S.contracts.filter(c=>c!==ct);
+  const box = $('#result-box');
+  box.className = 'result-box panel ' + (victory?'victory':'defeat');
+  box.innerHTML = `
+    <h2>${victory?'⚔ 승리':'🏴 '+(retreat?'후퇴':'패배')}</h2>
+    <p class="sub">${ct.place} — ${ct.name}</p>
+    <ul class="result-list">${lines.map(l=>`<li>${l}</li>`).join('')}</ul>
+    <button class="btn gold block" onclick="G.afterBattle()">본진으로 귀환 (하루 경과)</button>`;
+  show('#screen-result');
+  save();
+}
+G.afterBattle = function(){
+  SFX.click();
+  advanceDay();
+  show('#screen-hub');
+  switchTab('contracts');
+};
+function switchTab(tab){
+  curTab = tab;
+  $$('#tabs .tab').forEach(x=>x.classList.toggle('on', x.dataset.tab===tab));
+  renderHub();
+}
+
+/* ---------- 하루 경과 ---------- */
+function advanceDay(){
+  S.day++;
+  // 급여
+  const wage = S.roster.reduce((a,m)=>a+mercWage(m),0);
+  if(wage>0){
+    if(S.gold>=wage){ S.gold-=wage; }
+    else {
+      S.gold=0; addRep(-2);
+      chron('급여를 지불하지 못했다. 단원들의 눈빛이 차가워진다. (명성 -2)');
+      toast('급여 체불! 명성 -2', true);
+    }
+  }
+  // 식량
+  const need = S.roster.reduce((a,m)=>a+mercFood(m),0);
+  if(need>0){
+    if(S.food>=need){ S.food-=need; }
+    else {
+      S.food=0;
+      S.roster.forEach(m=>{ m.hp=Math.max(1, m.hp-4); });
+      chron('식량이 떨어졌다. 굶주린 부대의 사기가 바닥이다. (전원 체력 -4)');
+      toast('식량 부족! 전원 체력 -4', true);
+    }
+  }
+  // 회복/부상
+  S.roster.forEach(m=>{
+    if(m.injury>0){
+      m.injury--;
+      if(m.injury<=0){ m.hp=Math.max(m.hp, Math.floor(mercStats(m).hp*0.5)); chron(`${m.name}이(가) 부상에서 회복했다.`); }
+    } else {
+      m.hp = clamp(m.hp + Math.ceil(mercStats(m).hp*0.34), 1, mercStats(m).hp);
+    }
+  });
+  // 의뢰/후보 갱신
+  genContracts();
+  genCandidates();
+  // 구제 이벤트 (전멸+파산 소프트락 방지)
+  if(S.roster.length===0 && S.gold<80 && S.day-S.lastAidDay>3){
+    S.lastAidDay = S.day;
+    S.gold += 120;
+    chron('재의 여울 촌장이 지원금 120골드를 보내왔다. "다시 일어서게, 대장."');
+    toast('촌장의 지원금 +120🪙');
+  }
+  // 랜덤 이벤트
+  if(Math.random()<0.32) showEvent(pick(EVENTS));
+  save();
+}
+function showEvent(ev){
+  const choices = ev.choices.filter(ch=>!ch.can || ch.can(S));
+  if(ev.auto){
+    const msg = ev.choices[0].fx(S);
+    chron(`[${ev.title}] ${msg}`);
+    openModal(`
+      <h3>🎲 ${ev.title}</h3>
+      <p style="color:var(--ink-dim)">${ev.text}</p>
+      <p style="font-weight:700">${msg}</p>
+      <div class="modal-actions"><button class="btn gold" onclick="G.closeModal();G.rerender()">확인</button></div>`, true);
+    return;
+  }
+  window.__evt = ev;
+  openModal(`
+    <h3>🎲 ${ev.title}</h3>
+    <p style="color:var(--ink-dim)">${ev.text}</p>
+    <div class="pick-list">
+      ${ev.choices.map((ch,i)=>{
+        const ok = !ch.can || ch.can(S);
+        return `<button class="pick-item" ${ok?'':'disabled'} onclick="G.eventChoice(${i})">${ch.label}${ok?'':' (조건 부족)'}</button>`;
+      }).join('')}
+    </div>`, true);
+}
+G.eventChoice = function(i){
+  const ev = window.__evt; if(!ev) return;
+  const ch = ev.choices[i];
+  if(ch.can && !ch.can(S)) return;
+  const msg = ch.fx(S);
+  chron(`[${ev.title}] ${msg}`);
+  closeModal();
+  toast(msg);
+  renderHub();
+};
+G.rerender = ()=>renderHub();
+
+/* ---------- 휴식 ---------- */
+$('#btnRest').addEventListener('click', ()=>{
+  SFX.click();
+  openModal(`
+    <h3>🌙 하루 휴식</h3>
+    <p class="modal-sub">부대가 야영하며 체력을 회복한다. 급여와 식량이 소모되고, 의뢰판과 주점이 갱신된다.</p>
+    <div class="modal-actions">
+      <button class="btn" onclick="G.closeModal()">취소</button>
+      <button class="btn gold" onclick="G.restDo()">휴식한다</button>
+    </div>`);
+});
+G.restDo = function(){
+  closeModal();
+  advanceDay();
+  toast(`${S.day}일차 아침이 밝았다`);
+  renderHub();
+};
+
+/* ---------- 메뉴/도움말 ---------- */
+$('#btnMenu').addEventListener('click', ()=>{
+  openModal(`
+    <h3>☰ 메뉴</h3>
+    <div class="pick-list">
+      <button class="pick-item" onclick="G.closeModal();G.saveNow()">💾 지금 저장</button>
+      <button class="pick-item" onclick="G.toTitle()">🏰 타이틀로 (자동 저장됨)</button>
+      <button class="pick-item" onclick="G.resetConfirm()">🗑 연대기 초기화 (저장 삭제)</button>
+    </div>
+    <div class="modal-actions"><button class="btn" onclick="G.closeModal()">닫기</button></div>`);
+});
+G.saveNow = ()=>{ save(); toast('저장 완료'); };
+G.toTitle = ()=>{ save(); closeModal(); initTitle(); show('#screen-title'); };
+G.resetConfirm = ()=>{
+  openModal(`
+    <h3>🗑 연대기 초기화</h3>
+    <p class="modal-sub">모든 진행이 사라진다. 되돌릴 수 없다. 정말?</p>
+    <div class="modal-actions">
+      <button class="btn" onclick="G.closeModal()">취소</button>
+      <button class="btn red" onclick="G.resetDo()">삭제한다</button>
+    </div>`);
+};
+G.resetDo = ()=>{ try{ localStorage.removeItem(SAVE_KEY); }catch(e){} closeModal(); S=null; initTitle(); show('#screen-title'); toast('저장이 삭제되었다'); };
+$('#btnSound').addEventListener('click', ()=>{ const on=SFX.toggle(); $('#btnSound').textContent=on?'🔊':'🔇'; if(on)SFX.click(); });
+$('#btnHelp').addEventListener('click', showHelp);
+function showHelp(){
+  openModal(`
+    <h3>❔ 용병단 운영 지침</h3>
+    <div style="font-size:13.5px;color:var(--ink-dim);line-height:1.8">
+      <p><b class="gold-text">목표</b> — 명성 80을 쌓아 최종 의뢰 <b>「검은 군단 본진 섬멸」</b>을 완수하라.</p>
+      <p><b class="gold-text">하루의 흐름</b> — 매일 <b>의뢰 출정</b> 또는 <b>휴식</b> 중 하나를 택한다. 하루가 지나면 급여(🪙)와 식량(🍞)이 인원수만큼 빠져나간다. 놀고 있어도 돈은 나간다 — 그것이 용병단이다.</p>
+      <p><b class="gold-text">전투</b> — 속도가 빠른 자부터 행동한다. 공격/스킬/물약/대기 중 선택하고 목표를 클릭. 스킬은 재사용 대기가 있다. 위험하면 🏳 후퇴하라 — 죽는 것보단 낫다.</p>
+      <p><b class="gold-text">부상</b> — 쓰러진 단원은 죽지 않지만 며칠간 출전 불가. 휴식하면 회복이 빨라진다.</p>
+      <p><b class="gold-text">성장</b> — 승리로 경험치를 얻어 레벨업. 시장에서 무기/방어구를 장착하라. 명성이 오르면 더 어렵고 보수가 큰 의뢰와 더 뛰어난 용병 후보가 나타난다.</p>
+    </div>
+    <div class="modal-actions"><button class="btn gold" onclick="G.closeModal()">알겠다</button></div>`);
+}
+
+/* ---------- 엔딩 ---------- */
+function showEnding(){
+  const st = S.stats;
+  const grade = st.fallen===0 ? 'S — 불패의 전설' : st.fallen<=3 ? 'A — 위대한 지휘관' : st.fallen<=8 ? 'B — 역전의 용병대장' : 'C — 상처뿐인 영광';
+  $('#ending-box').innerHTML = `
+    <div class="title-emblem">👑</div>
+    <h2 class="serif" style="color:var(--gold-soft);font-size:32px;margin:0 0 8px">전설이 되다</h2>
+    <p style="font-family:var(--serif);color:var(--ink-dim);line-height:1.9;max-width:44ch;margin:0 auto">
+      몰락한 왕성 위로 아침 해가 떠올랐다. 군단주 카르가스는 재가 되어 흩어지고,
+      <b class="gold-text">${S.company}</b>의 깃발이 폐허 위에 꽂혔다.<br><br>
+      음유시인들은 노래할 것이다 — 쥐잡기 의뢰로 시작해 왕국을 구한 용병단의 이야기를.
+      그대의 연대기는 이제 역사가 되었다.</p>
+    <div class="ending-stats">
+      <div class="panel"><b>${S.day}일</b><span>여정의 길이</span></div>
+      <div class="panel"><b>${st.wins}/${st.battles}</b><span>전투 승리</span></div>
+      <div class="panel"><b>${fmt(st.goldEarned)}</b><span>벌어들인 골드</span></div>
+      <div class="panel"><b>${st.kills}</b><span>처치한 적</span></div>
+      <div class="panel"><b>${st.fallen}</b><span>쓰러진 횟수</span></div>
+      <div class="panel"><b>${grade.split(' ')[0]}</b><span>${grade.slice(4)}</span></div>
+    </div>
+    <div style="display:flex;gap:10px;flex-direction:column">
+      <button class="btn gold block" onclick="G.freePlay()">⚔ 자유 용병 생활 계속하기</button>
+      <button class="btn block" onclick="G.newChronicle()">📜 새로운 연대기 시작</button>
+    </div>`;
+  show('#screen-ending');
+  SFX.win();
+}
+G.freePlay = function(){
+  S.freePlay = true;
+  genContracts();
+  advanceDay();
+  save();
+  show('#screen-hub');
+  switchTab('contracts');
+  toast('자유 용병 생활 — 의뢰는 계속된다');
+};
+G.newChronicle = function(){
+  try{ localStorage.removeItem(SAVE_KEY); }catch(e){}
+  S=null; initTitle(); show('#screen-title');
+};
+
+/* ---------- 시작 ---------- */
+function startNewGame(name){
+  S = newState(name || '이름 없는 용병단');
+  mercSeq = 1; contractSeq = 1;
+  // 시작 멤버: 전사 + 궁수
+  const w = makeMerc('warrior'); const a = makeMerc('archer');
+  S.roster.push(w, a);
+  genContracts();
+  genCandidates();
+  checkStory();
+  chron(`${S.company}, 재의 여울에서 창단. ${w.name}과 ${a.name}이 첫 단원이 되었다.`);
+  save();
+  show('#screen-hub');
+  switchTab('roster');
+  setTimeout(showHelp, 350);
+}
+function initTitle(){
+  const has = !!load();
+  $('#btnContinue').style.display = has?'':'none';
+}
+$('#btnNew').addEventListener('click', ()=>{
+  SFX.click();
+  const existing = load();
+  const go = ()=>startNewGame($('#companyName').value.trim());
+  if(existing && !existing.won){
+    openModal(`
+      <h3>⚠ 진행 중인 연대기</h3>
+      <p class="modal-sub">저장된 연대기(${existing.company}, ${existing.day}일차)가 있다. 새로 시작하면 덮어쓴다.</p>
+      <div class="modal-actions">
+        <button class="btn" onclick="G.closeModal()">취소</button>
+        <button class="btn red" onclick="G.closeModal();G.__forceNew()">덮어쓰고 시작</button>
+      </div>`);
+    G.__forceNew = go;
+    return;
+  }
+  go();
+});
+$('#btnContinue').addEventListener('click', ()=>{
+  SFX.click();
+  const s = load();
+  if(!s) return toast('저장 데이터가 없다', true);
+  S = s;
+  if(S.won && !S.freePlay) return showEnding();
+  show('#screen-hub');
+  switchTab('roster');
+  toast(`${S.day}일차 — 이어서 시작`);
+});
+initTitle();
+show('#screen-title');
+
+/* 디버그/테스트 훅 (콘솔에서 사용 가능) */
+window.__DEBUG = {
+  get S(){ return S; }, get B(){ return B; },
+  save, load, renderHub, advanceDay, genContracts, startBattle, switchTab,
+  addGold(n){ S.gold+=n; renderHub(); },
+  addRepN(n){ addRep(n); renderHub(); },
+};
+</script>
+</body>
+</html>
