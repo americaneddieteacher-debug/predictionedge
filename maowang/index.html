@@ -212,6 +212,16 @@ input[type=range]{width:100%; accent-color:var(--gold); height:32px}
 /* 엔딩 선택 */
 .end-choice{display:flex; flex-direction:column; gap:10px; width:min(300px,100%); margin-bottom:8px}
 
+/* 랭킹 */
+.lb-input{width:100%; background:var(--card2); border:1px solid var(--line); border-radius:12px; padding:12px 14px;
+  color:var(--ink); font:inherit; margin:0 0 8px; text-align:center; outline:none}
+.lb-input:focus{border-color:var(--gold)}
+.lb-row{display:flex; align-items:center; gap:10px; padding:8px 2px; border-bottom:1px dashed rgba(255,255,255,.08); font-size:13.5px}
+.lb-row .rk{width:26px; text-align:center; font-weight:900; color:var(--muted)}
+.lb-row .rk.top{color:var(--gold)}
+.lb-row .nm{flex:1; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.lb-row .sc{color:var(--gold); font-weight:800}
+
 @media (min-width:521px){ .app{border-left:1px solid var(--line); border-right:1px solid var(--line)} }
 </style>
 </head>
@@ -227,7 +237,7 @@ input[type=range]{width:100%; accent-color:var(--gold); height:32px}
       <button class="btn" id="btn-continue" style="display:none">이어하기</button>
       <button class="btn ghost" id="btn-new">처음부터</button>
     </div>
-    <p class="title-foot">v1.1 · 자동 저장 · 브라우저에 기록됩니다</p>
+    <p class="title-foot">v1.2 · 자동 저장 · 세계 랭킹 지원</p>
   </div>
 
   <!-- 상단바 -->
@@ -328,6 +338,10 @@ input[type=range]{width:100%; accent-color:var(--gold); height:32px}
       <button class="btn ghost" id="btn-end-conquer">😈 자본으로 재정복한다 (정복의 길)</button>
     </div>
     <div class="stats" id="ending-stats" style="display:none"></div>
+    <div id="lb-box" style="display:none; width:min(300px,100%); margin-bottom:18px">
+      <input class="lb-input" id="lb-name" maxlength="12" placeholder="랭킹에 남길 이름 (12자 이내)">
+      <button class="btn small" id="btn-lb-submit" style="width:100%">🌍 세계 랭킹에 기록 등록</button>
+    </div>
     <button class="btn" id="btn-endless" style="display:none">👑 전설의 상회로 계속하기 (무한 모드)</button>
     <button class="btn ghost" id="btn-ending-restart" style="display:none; margin-top:10px">처음부터 다시</button>
   </div>
@@ -537,7 +551,7 @@ function wipe(){ try{ localStorage.removeItem(SAVE_KEY); }catch(e){} }
 /* 영구 기록(도감·업적·명예의 전당) — 게임을 리셋해도 유지 */
 const META_KEY = "maowang_meta_v1";
 let M = (function(){
-  const def = {dex:{}, ach:[], endings:[], rec:{maxGold:0, bestSale:0, clears:0, endlessBestDay:0, clearGold:0}};
+  const def = {dex:{}, ach:[], endings:[], name:"", rec:{maxGold:0, bestSale:0, clears:0, endlessBestDay:0, clearGold:0}};
   try{ return Object.assign(def, JSON.parse(localStorage.getItem(META_KEY)||"{}")); }catch(e){ return def; }
 })();
 function saveMeta(){ try{ localStorage.setItem(META_KEY, JSON.stringify(M)); }catch(e){} }
@@ -546,6 +560,27 @@ function dexAdd(id, price){
   if (price && price > M.rec.bestSale) M.rec.bestSale = price;
   saveMeta();
 }
+
+/* ─── 세계 랭킹 (Supabase, anon 공개 키 — RLS로 보호) ─── */
+const LB = {
+  url: "https://ovvqanauvzpqqyrulwqw.supabase.co/rest/v1/maowang_scores",
+  key: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im92dnFhbmF1dnpwcXF5cnVsd3F3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0NTc2MDIsImV4cCI6MjA4OTAzMzYwMn0.0SmxNoilZ1xonp6Z3MJBMAG8KfemWHC6dYbId-LDy-4",
+};
+async function lbSubmit(name, mode, score, day){
+  const r = await fetch(LB.url, {
+    method:"POST",
+    headers:{apikey:LB.key, Authorization:"Bearer "+LB.key, "Content-Type":"application/json", Prefer:"return=minimal"},
+    body:JSON.stringify({name, mode, score, day}),
+  });
+  if (!r.ok) throw new Error("submit "+r.status);
+}
+async function lbTop(mode, limit){
+  const r = await fetch(`${LB.url}?select=name,score,day&mode=eq.${mode}&order=score.desc,created_at.asc&limit=${limit||10}`,
+    {headers:{apikey:LB.key, Authorization:"Bearer "+LB.key}});
+  if (!r.ok) throw new Error("top "+r.status);
+  return r.json();
+}
+function lbNameOk(v){ const n=(v||"").trim(); return n.length>=1 && n.length<=12 ? n : null; }
 
 function repLv(){ let l=0; REP_LV.forEach((r,i)=>{ if (S.rep>=r.min) l=i; }); return l; }
 function repInfo(){
@@ -1204,6 +1239,26 @@ function endingEpilogue(kind){
   $("#ending-stats").style.display="";
   $("#btn-endless").style.display="";
   $("#btn-ending-restart").style.display="";
+  // 세계 랭킹 등록 (클리어 잔액이 점수)
+  $("#lb-box").style.display="";
+  $("#lb-name").value = M.name||"";
+  const sb=$("#btn-lb-submit");
+  sb.disabled=false; sb.textContent="🌍 세계 랭킹에 기록 등록";
+  sb.onclick=async()=>{
+    const name=lbNameOk($("#lb-name").value);
+    if (!name){ toast("이름을 1~12자로 입력하세요"); return; }
+    sb.disabled=true; sb.textContent="등록 중…";
+    try{
+      await lbSubmit(name, "clear", S.gold, 30);
+      M.name=name; saveMeta();
+      sb.textContent="✅ 등록 완료!";
+      toast(`🌍 세계 랭킹 등록! ${name} — ${fmt(S.gold)}G`, true);
+      SND.coin();
+    }catch(e){
+      sb.disabled=false; sb.textContent="🌍 세계 랭킹에 기록 등록";
+      toast("⚠️ 등록 실패 — 네트워크 연결을 확인하세요");
+    }
+  };
 }
 $("#btn-end-peace").onclick=()=>endingEpilogue("peace");
 $("#btn-end-conquer").onclick=()=>endingEpilogue("conquer");
@@ -1311,8 +1366,59 @@ function showHall(){
     <div class="rr"><span>♾️ 무한 모드 최장</span><b>${M.rec.endlessBestDay? M.rec.endlessBestDay+"일차":"—"}</b></div>
     <div class="rr"><span>🎬 수집한 엔딩</span><b>${endTxt}</b></div>
     <div style="margin-top:10px">${achList}</div>
+    <button class="btn ghost" id="hall-world">🌍 세계 랭킹 보기</button>
+    ${M.rec.endlessBestDay>0?`<button class="btn ghost" id="hall-endless-sub">♾️ 무한 모드 기록 등록 (${M.rec.endlessBestDay}일차)</button>`:""}
     <button class="btn" id="hall-close">닫기</button>`);
   $("#hall-close").onclick=closeModal;
+  $("#hall-world").onclick=showWorld;
+  const es=$("#hall-endless-sub");
+  if (es) es.onclick=showEndlessSubmit;
+}
+
+function lbRows(list, mode){
+  if (!list.length) return `<p class="muted" style="font-size:13px; margin:8px 0">아직 기록이 없습니다. 1등의 기회!</p>`;
+  return list.map((r,i)=>`<div class="lb-row">
+    <span class="rk ${i<3?"top":""}">${["🥇","🥈","🥉"][i]||i+1}</span>
+    <span class="nm">${String(r.name).replace(/[<>&]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[c]))}</span>
+    <span class="sc">${mode==="clear"? fmt(r.score)+"G" : fmt(r.score)+"일차"}</span>
+  </div>`).join("");
+}
+async function showWorld(){
+  modal(`<h3>🌍 세계 랭킹</h3><p class="muted" style="font-size:12.5px; margin:4px 0 0">불러오는 중…</p>`);
+  try{
+    const [clears, endless] = await Promise.all([lbTop("clear",10), lbTop("endless",10)]);
+    modal(`<h3>🌍 세계 랭킹</h3>
+      <h4 style="margin:12px 0 2px; font-size:14px">👑 클리어 — 남은 골드</h4>${lbRows(clears,"clear")}
+      <h4 style="margin:16px 0 2px; font-size:14px">♾️ 무한 모드 — 도달 일차</h4>${lbRows(endless,"endless")}
+      <button class="btn" id="world-close">닫기</button>`);
+  }catch(e){
+    modal(`<h3>🌍 세계 랭킹</h3><p class="muted" style="font-size:13px">⚠️ 불러오기 실패 — 네트워크 연결을 확인하세요.</p>
+      <button class="btn" id="world-close">닫기</button>`);
+  }
+  $("#world-close").onclick=closeModal;
+}
+function showEndlessSubmit(){
+  modal(`<h3>♾️ 무한 모드 기록 등록</h3>
+    <p class="muted" style="font-size:13px">최장 기록 <b class="gold">${M.rec.endlessBestDay}일차</b>를 세계 랭킹에 올립니다.</p>
+    <input class="lb-input" id="lb-name2" maxlength="12" placeholder="랭킹에 남길 이름 (12자 이내)" value="${(M.name||"").replace(/"/g,"")}">
+    <button class="btn" id="btn-lb-submit2">등록하기</button>
+    <button class="btn ghost" id="lb2-close">취소</button>`);
+  $("#lb2-close").onclick=closeModal;
+  const sb=$("#btn-lb-submit2");
+  sb.onclick=async()=>{
+    const name=lbNameOk($("#lb-name2").value);
+    if (!name){ toast("이름을 1~12자로 입력하세요"); return; }
+    sb.disabled=true; sb.textContent="등록 중…";
+    try{
+      await lbSubmit(name, "endless", M.rec.endlessBestDay, M.rec.endlessBestDay);
+      M.name=name; saveMeta();
+      toast(`🌍 무한 모드 ${M.rec.endlessBestDay}일차 기록 등록!`, true);
+      SND.coin(); closeModal();
+    }catch(e){
+      sb.disabled=false; sb.textContent="등록하기";
+      toast("⚠️ 등록 실패 — 네트워크 연결을 확인하세요");
+    }
+  };
 }
 
 /* ─── 렌더 디스패치 ─── */
