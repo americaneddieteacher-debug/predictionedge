@@ -494,7 +494,8 @@ function targets(f,foes){
 }
 async function runBattle(){
  run.phase="battle";saveRun();
- showScreen("battle");battleSpeed=1;
+ showScreen("battle");
+ $("#btn-skip").textContent=battleSpeed===1?"⏩ 빨리감기":"▶️ 보통 속도";
  $("#b-round").textContent=run.round+"/12";
  const en=run.enemy;
  $("#b-title").textContent=(en.boss?"👑 보스전 — ":"")+en.name;
@@ -595,9 +596,7 @@ async function dealDamage(t,dmg,src,allies,foes,log,label){
   const enemyTeam=t.team==="ally"?foes:allies;
   // 사망 트리거
   if(t.id==="slime"){
-   t.alive=false;
-   const mini={uid:UID++,id:"minislime"};
-   const mf={uid:mini.uid,id:"slime",n:"미니 슬라임",e:"🫧",f:"spirit",role:"melee",star:1,team:t.team,slot:t.slot,atk:1,hp:2,maxhp:2,shield:0,burn:0,frozen:false,alive:true,usedRevive:true};
+   const mf={uid:UID++,id:"minislime",n:"미니 슬라임",e:"🫧",f:"spirit",role:"melee",star:1,team:t.team,slot:t.slot,atk:1,hp:2,maxhp:2,shield:0,burn:0,frozen:false,alive:true,usedRevive:true};
    myTeam.push(mf);log(`🫧 슬라임이 분열했다!`)}
   if(t.id==="dknight"){for(const e of enemyTeam)if(e.alive)await dealDamage(e,4,null,allies,foes,log,"죽음의 폭발");
    myTeam.forEach(x=>{if(x.alive&&x.f==="undead"){x.atk+=2;popup(x,"ATK+2","buff")}})}
