@@ -300,7 +300,7 @@ input{font-family:inherit}
       <button id="btnContinue" class="btn block" style="display:none">📜 이어서 하기</button>
     </div>
     <p class="title-meta" id="title-meta"></p>
-    <p class="title-foot">v2.0 · 자동 저장 · 회차·유산 시스템 · 모바일 지원</p>
+    <p class="title-foot">v2.1 · 자동 저장 · 회차·유산 시스템 · 모바일 지원</p>
   </section>
 
   <!-- ======== 본진(허브) ======== -->
@@ -336,6 +336,7 @@ input{font-family:inherit}
     <div id="battle-head">
       <h2 id="battle-title"></h2>
       <span class="round" id="battle-round"></span>
+      <button class="btn sm" id="btnSpeed">⏩ <b id="speedState">1×</b></button>
       <button class="btn sm" id="btnAuto">⚙ 자동 전투: <b id="autoState">꺼짐</b></button>
       <button class="btn sm red" id="btnRetreat">🏳 후퇴</button>
     </div>
@@ -478,8 +479,8 @@ const CLASSES = {
   cleric:{ name:'성직자', icon:'✨', hp:22, atk:5,  def:3, spd:5, wage:11, row:'back',
     growth:{hp:4.5, atk:1.1, def:0.5, spd:0.2},
     skills:[
-      { name:'치유의 빛', desc:'아군 하나 최대 체력 40% 회복', cd:2, type:'heal', mult:0.4 },
-      { name:'정화의 기도', desc:'아군 전체 18% 회복 + 상태이상 해제', cd:4, type:'groupheal', mult:0.18 },
+      { name:'치유의 빛', desc:'아군 하나 최대 체력 30% 회복', cd:2, type:'heal', mult:0.3 },
+      { name:'정화의 기도', desc:'아군 전체 14% 회복 + 상태이상 해제', cd:4, type:'groupheal', mult:0.14 },
     ]},
   rogue:{  name:'도적',   icon:'🗡️', hp:22, atk:8,  def:2, spd:9, wage:10, row:'front',
     growth:{hp:3.5, atk:1.8, def:0.3, spd:0.45},
@@ -532,20 +533,20 @@ const ENEMIES = {
   wolf:       { name:'굶주린 늑대',  icon:'🐺', hp:16,  atk:5,  def:0, spd:8,  gold:14,  exp:14 },
   goblin:     { name:'고블린',      icon:'👺', hp:14,  atk:4,  def:1, spd:5,  gold:13,  exp:12 },
   gobArcher:  { name:'고블린 투석병',icon:'🪃', hp:12,  atk:5,  def:0, spd:6,  gold:16,  exp:14, ranged:true },
-  gobWarrior: { name:'고블린 전사',  icon:'👹', hp:24,  atk:6,  def:2, spd:5,  gold:24,  exp:20 },
-  wolfAlpha:  { name:'우두머리 늑대',icon:'🐺', hp:30,  atk:7,  def:1, spd:9,  gold:30,  exp:26 },
-  bandit:     { name:'산적',        icon:'🥷', hp:26,  atk:7,  def:2, spd:6,  gold:27,  exp:22 },
-  banditBoss: { name:'산적 두목',    icon:'☠️', hp:48,  atk:9,  def:3, spd:6,  gold:62,  exp:45, heavy:true },
-  skeleton:   { name:'해골 병사',    icon:'💀', hp:28,  atk:8,  def:3, spd:4,  gold:30,  exp:26 },
-  skelArcher: { name:'해골 궁수',    icon:'🦴', hp:20,  atk:9,  def:1, spd:7,  gold:32,  exp:28, ranged:true },
-  orc:        { name:'오크 전사',    icon:'👹', hp:40,  atk:10, def:3, spd:5,  gold:46,  exp:40 },
-  orcShaman:  { name:'오크 주술사',  icon:'🌀', hp:30,  atk:9,  def:1, spd:6,  gold:52,  exp:45, ranged:true, caster:true },
-  orcChief:   { name:'오크 족장',    icon:'👹', hp:75,  atk:12, def:4, spd:6,  gold:115, exp:85, heavy:true },
-  wraith:     { name:'망령',        icon:'👻', hp:34,  atk:11, def:0, spd:10, gold:70,  exp:55, ranged:true },
-  darkKnight: { name:'검은 기사',    icon:'🦹', hp:62,  atk:13, def:6, spd:5,  gold:95,  exp:70 },
-  ogre:       { name:'오우거',      icon:'🧌', hp:90,  atk:13, def:2, spd:3,  gold:120, exp:90, heavy:true },
-  cultist:    { name:'암흑 사제',    icon:'🧙', hp:35,  atk:10, def:1, spd:6,  gold:60,  exp:50, ranged:true, caster:true },
-  dreadLord:  { name:'군단주 카르가스', icon:'👿', hp:190, atk:15, def:6, spd:7, gold:450, exp:340, boss:true },
+  gobWarrior: { name:'고블린 전사',  icon:'👹', hp:28,  atk:7,  def:2, spd:5,  gold:24,  exp:20 },
+  wolfAlpha:  { name:'우두머리 늑대',icon:'🐺', hp:34,  atk:8,  def:1, spd:9,  gold:30,  exp:26 },
+  bandit:     { name:'산적',        icon:'🥷', hp:30,  atk:9,  def:2, spd:6,  gold:27,  exp:22 },
+  banditBoss: { name:'산적 두목',    icon:'☠️', hp:58,  atk:11, def:3, spd:6,  gold:62,  exp:45, heavy:true },
+  skeleton:   { name:'해골 병사',    icon:'💀', hp:32,  atk:10, def:3, spd:4,  gold:30,  exp:26 },
+  skelArcher: { name:'해골 궁수',    icon:'🦴', hp:24,  atk:11, def:1, spd:7,  gold:32,  exp:28, ranged:true },
+  orc:        { name:'오크 전사',    icon:'👹', hp:46,  atk:12, def:3, spd:5,  gold:46,  exp:40 },
+  orcShaman:  { name:'오크 주술사',  icon:'🌀', hp:34,  atk:11, def:1, spd:6,  gold:52,  exp:45, ranged:true, caster:true },
+  orcChief:   { name:'오크 족장',    icon:'👹', hp:88,  atk:15, def:4, spd:6,  gold:115, exp:85, heavy:true },
+  wraith:     { name:'망령',        icon:'👻', hp:38,  atk:13, def:0, spd:10, gold:70,  exp:55, ranged:true },
+  darkKnight: { name:'검은 기사',    icon:'🦹', hp:70,  atk:16, def:6, spd:5,  gold:95,  exp:70 },
+  ogre:       { name:'오우거',      icon:'🧌', hp:110, atk:16, def:2, spd:3,  gold:120, exp:90, heavy:true },
+  cultist:    { name:'암흑 사제',    icon:'🧙', hp:40,  atk:12, def:1, spd:6,  gold:60,  exp:50, ranged:true, caster:true },
+  dreadLord:  { name:'군단주 카르가스', icon:'👿', hp:230, atk:18, def:6, spd:7, gold:450, exp:340, boss:true },
 };
 
 const CONTRACT_TIERS = [
@@ -623,6 +624,33 @@ const EVENTS = [
     choices:[ { label:'…', fx:s=>{ const g=Math.min(s.gold,25); s.gold-=g; return `골드 ${g}을(를) 도둑맞았다. 보초를 더 세워야겠다.`; } } ]},
   { id:'pilgrim', title:'순례자의 축복', text:'지나가던 순례자가 물 한 잔의 답례로 부대를 축복해 주었다.', auto:true,
     choices:[ { label:'…', fx:s=>{ s.roster.forEach(m=>{ if(!m.injury) m.hp=mercStats(m).hp; }); SFX.heal(); return '전원의 체력이 회복되었다.'; } } ]},
+  { id:'deserter', title:'탈영병의 정보', text:'적진에서 도망친 탈영병이 정보를 팔겠다고 한다. "30골드면 놈들의 약점을 알려주지."',
+    choices:[
+      { label:'산다 (-30🪙, 다음 승리 보수 +50%)', can:s=>s.gold>=30, fx:s=>{ s.gold-=30; s.nextRewardBonus=true; return '정보를 손에 넣었다. 다음 의뢰의 보수가 두둑해질 것이다.'; } },
+      { label:'쫓아낸다', fx:()=>'탈영병은 투덜대며 어둠 속으로 사라졌다.' },
+    ]},
+  { id:'bard', title:'음유시인', text:'떠돌이 음유시인이 노래 소재를 찾고 있다. 술 한 잔 값이면 용병단의 무용담을 곳곳에 퍼뜨려 주겠다고 한다.',
+    choices:[
+      { label:'술을 산다 (-20🪙, +3🏅)', can:s=>s.gold>=20, fx:s=>{ s.gold-=20; addRep(3); return '용병단의 노래가 마을마다 울려 퍼진다.'; } },
+      { label:'거절한다', fx:()=>'시인은 다른 이야깃거리를 찾아 떠났다.' },
+    ]},
+  { id:'rival', title:'라이벌 용병단', text:'「검은 수탉단」이 시비를 걸어온다. "너희가 요즘 뜬다는 애송이들이냐?" 팔씨름 대결로 자존심을 겨루자고 한다.',
+    choices:[
+      { label:'받아준다 (50% — 성공 +4🏅 / 실패 -2🏅)', fx:s=>{ if(Math.random()<0.5){ addRep(4); return '우리 전사가 상대의 팔을 테이블에 꽂았다! 구경꾼들이 환호한다.'; } addRep(-2); return '분하다. 오늘 술값은 우리가 냈다.'; } },
+      { label:'무시한다', fx:()=>'싸움은 전장에서만. 조용히 술잔을 비웠다.' },
+    ]},
+  { id:'shrine', title:'오래된 제단', text:'숲 속에서 이끼 낀 제단을 발견했다. 공물을 바치면 옛 전사의 가호가 내린다는 전설이 있다.',
+    choices:[
+      { label:'물약을 바친다 (-1🧪, 무작위 단원 EXP+30)', can:s=>s.potions>=1&&s.roster.length>0, fx:s=>{ s.potions--; const m=pick(s.roster); gainExp(m,30); return `제단이 희미하게 빛났다. ${m.name}이(가) 옛 전사의 기억을 얻었다.`; } },
+      { label:'지나친다', fx:()=>'미신에 기댈 시간은 없다.' },
+    ]},
+  { id:'caravan', title:'급한 호위 요청', text:'상단 마차가 근처 마을까지만 동행해 달라고 한다. 하루 일정에 부담은 없지만 식량이 조금 든다.',
+    choices:[
+      { label:'수락한다 (+40🪙, -2🍞)', can:s=>s.food>=2, fx:s=>{ s.gold+=40; s.food-=2; SFX.coin(); return '무사히 호위를 마쳤다. 상인이 금화 주머니를 건넨다.'; } },
+      { label:'거절한다', fx:()=>'마차는 불안한 듯 서둘러 떠났다.' },
+    ]},
+  { id:'rain', title:'폭우', text:'밤새 폭우가 쏟아졌다. 천막이 새고 식량 일부가 젖어버렸다.', auto:true,
+    choices:[ { label:'…', fx:s=>{ const f=Math.min(s.food,2); s.food-=f; return `식량 ${f}이(가) 못 쓰게 됐다. 젖은 장작으로는 불도 잘 붙지 않는다.`; } } ]},
 ];
 
 const CHALLENGES = [
@@ -697,7 +725,7 @@ function newState(name, challenges){
     roster:[], candidates:[], contracts:[], chron:[], relics:[], challenges:challenges||[],
     stats:{ battles:0, wins:0, kills:0, goldEarned:0, fallen:0 },
     storySeen:[], finalUnlocked:false, won:false, freePlay:false,
-    lastAidDay:-99,
+    lastAidDay:-99, nextRewardBonus:false,
   };
 }
 function hasChal(id){ return S && S.challenges.includes(id); }
@@ -952,7 +980,7 @@ function viewContracts(){
       <div class="enemy-preview">${ct.enemies.map(k=>ENEMIES[k].icon).join('')}</div>
       <div class="muted" style="font-size:12px">${ct.enemies.map(k=>ENEMIES[k].name).join(', ')}</div>
       ${ct.final?`<div style="font-size:12.5px;color:var(--red-soft);margin-top:6px;font-weight:700">${ct.desc}</div>`:''}
-      <div class="reward-row"><span class="gold-text">🪙 ${fmt(ct.reward)}</span><span>🏅 +${ct.rep}</span><span class="muted">EXP ${ct.exp}</span></div>
+      <div class="reward-row"><span class="gold-text">🪙 ${fmt(ct.reward)}</span><span>🏅 +${ct.rep}</span><span class="muted">EXP ${ct.exp} 분배</span></div>
       <div class="card-actions">
         <button class="btn sm gold" onclick="G.openDeploy('${ct.id}')" ${able?'':'disabled'}>⚔ 출정</button>
       </div>
@@ -1227,6 +1255,7 @@ window.G = G;
 /* =====================================================================
    전투 엔진 v2 — 전열/후열 · 상태이상 · 적 의도
    ===================================================================== */
+function dly(ms){ return (B && B.fast) ? Math.round(ms*0.42) : ms; }
 function hasStatus(u,type){ return u.statuses.some(s=>s.type===type); }
 function statusPower(u,type){ const s=u.statuses.find(x=>x.type===type); return s?s.power:0; }
 function addStatus(u,type,turns,power){
@@ -1265,9 +1294,10 @@ function startBattle(contract, mercIds){
   });
   saveMeta();
   B = { contract, units, round:0, queue:[], qi:-1, active:null, pending:null, over:false,
-        auto:false, logEl:$('#battle-log') };
+        auto:false, fast:!!M.fast, logEl:$('#battle-log') };
   $('#battle-title').textContent = (contract.final?'⚑ ':'')+contract.name;
   $('#autoState').textContent = '꺼짐';
+  $('#speedState').textContent = B.fast?'2×':'1×';
   $('#battle-log').innerHTML = '';
   blog(`<span class="em">${contract.place}</span> — ${contract.name}. 전투 개시!`, true);
   show('#screen-battle');
@@ -1289,7 +1319,7 @@ function decideIntent(u){
     return 'attack';
   }
   if(u.caster && B.round>1 && B.round%3===0) return 'aoe';
-  if(u.heavy && Math.random()<0.3) return 'heavy';
+  if(u.heavy && Math.random()<0.35) return 'heavy';
   return 'attack';
 }
 const INTENT_ICONS = { attack:'⚔️', heavy:'💥', aoe:'🌀', enrage:'☠️' };
@@ -1326,18 +1356,18 @@ function nextTurn(){
     u.hp = Math.max(0, u.hp - dmg);
     floatText(u, `${STATUS_ICONS[s.type]}${dmg}`, 'dot');
     blog(`${u.name}이(가) ${s.type==='bleed'?'출혈':'중독'}로 <span class="bad">${dmg}</span> 피해.`);
-    if(u.hp<=0){ killUnit(u); syncBattleHp(); renderBattle(); return endTurn(500); }
+    if(u.hp<=0){ killUnit(u); syncBattleHp(); renderBattle(); return endTurn(dly(500)); }
   }
   syncBattleHp();
   // 기절
   if(hasStatus(u,'stun')){
     blog(`💫 ${u.name}은(는) 기절해 움직이지 못한다!`);
     renderBattle();
-    return endTurn(650);
+    return endTurn(dly(650));
   }
   renderBattle();
-  if(u.side==='enemy') setTimeout(()=>{ if(!B.over) enemyAct(u); }, 620);
-  else if(B.auto) setTimeout(()=>{ if(!B.over) autoAct(u); }, 380);
+  if(u.side==='enemy') setTimeout(()=>{ if(!B.over) enemyAct(u); }, dly(620));
+  else if(B.auto) setTimeout(()=>{ if(!B.over) autoAct(u); }, dly(380));
   /* else: 플레이어 입력 대기 */
 }
 function unitCard(u){
@@ -1389,7 +1419,7 @@ G.battleAction = function(act){
   const u = B.active; if(!u || u.side!=='party' || B.over) return;
   SFX.click();
   if(act==='cancel'){ B.pending=null; return renderBattle(); }
-  if(act==='wait'){ blog(`${u.name}은(는) 숨을 고른다.`); return endTurn(300); }
+  if(act==='wait'){ blog(`${u.name}은(는) 숨을 고른다.`); return endTurn(dly(300)); }
   if(act==='attack'){ B.pending={kind:'attack'}; return renderBattle(); }
   if(act==='potion'){ if(S.potions<=0) return; B.pending={kind:'potion'}; return renderBattle(); }
   if(act==='skill0'||act==='skill1'){
@@ -1412,7 +1442,7 @@ function execPlayer(target){
     const sk = CLASSES[u.cls].skills[p.idx];
     u.cds[p.idx] = sk.cd;
     if(sk.type==='strike') doAttack(u, target, sk.mult, {skill:sk.name});
-    else if(sk.type==='double'){ doAttack(u, target, sk.mult, {skill:sk.name}); if(target.alive) setTimeout(()=>{ if(!B.over&&target.alive){ doAttack(u,target,sk.mult,{quiet:true}); } }, 260); }
+    else if(sk.type==='double'){ doAttack(u, target, sk.mult, {skill:sk.name}); if(target.alive) setTimeout(()=>{ if(!B.over&&target.alive){ doAttack(u,target,sk.mult,{quiet:true}); } }, dly(260)); }
     else if(sk.type==='pierce') doAttack(u, target, sk.mult, {skill:sk.name, pierce:true, critBonus:sk.critBonus||25});
     else if(sk.type==='bleed'){ doAttack(u, target, sk.mult, {skill:sk.name}); if(target.alive){ addStatus(target,'bleed',2,Math.max(2,Math.round(u.atk*0.35))); blog(`${target.name}이(가) <span class="bad">출혈</span>을 입었다!`); } }
     else if(sk.type==='poison'){ doAttack(u, target, sk.mult, {skill:sk.name}); if(target.alive){ addStatus(target,'poison',2,Math.max(2,Math.round(u.atk*0.35))); blog(`${target.name}이(가) <span class="bad">중독</span>되었다!`); } }
@@ -1437,16 +1467,16 @@ function execPlayer(target){
     SFX.heal();
   }
   renderBattle();
-  endTurn(620);
+  endTurn(dly(620));
 }
 function execAoe(u, idx){
   const sk = CLASSES[u.cls].skills[idx];
   u.cds[idx] = sk.cd; B.pending=null;
   blog(`<span class="em">${u.name}</span>의 ${sk.name}이 적진을 휩쓴다!`);
   const targets = alive('enemy');
-  targets.forEach((t,i)=> setTimeout(()=>{ if(t.alive&&!B.over) doAttack(u,t,sk.mult,{quiet:true}); }, i*180));
-  setTimeout(()=>{ renderBattle(); }, targets.length*180+100);
-  endTurnLater(200 + targets.length*180 + 420);
+  targets.forEach((t,i)=> setTimeout(()=>{ if(t.alive&&!B.over) doAttack(u,t,sk.mult,{quiet:true}); }, dly(i*180)));
+  setTimeout(()=>{ renderBattle(); }, dly(targets.length*180+100));
+  endTurnLater(dly(200 + targets.length*180 + 420));
 }
 function endTurnLater(delay){
   const act = B.active;
@@ -1459,7 +1489,7 @@ function execTaunt(u, idx){
   blog(`<span class="em">${u.name}</span>의 ${sk.name}! 적들의 시선을 끌어모은다. (방어 +${sk.power||3})`);
   SFX.click();
   renderBattle();
-  endTurn(600);
+  endTurn(dly(600));
 }
 function execGroupHeal(u, idx){
   const sk = CLASSES[u.cls].skills[idx];
@@ -1474,7 +1504,7 @@ function execGroupHeal(u, idx){
   SFX.heal();
   syncBattleHp();
   renderBattle();
-  endTurn(650);
+  endTurn(dly(650));
 }
 function doAttack(att, tgt, mult, opts){
   if(!tgt.alive) return;
@@ -1544,8 +1574,8 @@ function enemyAct(u){
   const intent = u.intent || 'attack';
   if(intent==='aoe'){
     blog(`<span class="bad">🌀 ${u.name}의 광역 공격이 부대를 덮친다!</span>`);
-    party.forEach((t,i)=> setTimeout(()=>{ if(t.alive&&!B.over) doAttack(u,t,u.boss?0.75:0.6,{quiet:true}); }, i*160));
-    return endTurnLater(200 + party.length*160 + 420);
+    party.forEach((t,i)=> setTimeout(()=>{ if(t.alive&&!B.over) doAttack(u,t,u.boss?0.85:0.6,{quiet:true}); }, dly(i*160)));
+    return endTurnLater(dly(200 + party.length*160 + 420));
   }
   let mult = 1;
   if(intent==='heavy') mult = 1.5;
@@ -1555,7 +1585,7 @@ function enemyAct(u){
   }
   const tgt = pickTarget(u);
   if(tgt) doAttack(u, tgt, mult, {});
-  endTurn(560);
+  endTurn(dly(560));
 }
 function autoAct(u){
   if(B.over||!u.alive) return;
@@ -1563,6 +1593,14 @@ function autoAct(u){
   const enemies = alive('enemy');
   if(!enemies.length) return checkBattleEnd() || nextTurn();
   const party = alive('party');
+  // 위급하면 물약부터 마신다
+  if(S.potions>0 && u.hp < u.maxhp*0.35){
+    const R = relicMods();
+    S.potions--; healUnit(u, 25+R.potion);
+    blog(`${u.name}이(가) 급히 물약을 들이켰다. <span class="good">+${25+R.potion}</span>`);
+    renderBattle();
+    return endTurn(dly(560));
+  }
   const lowAlly = party.slice().sort((a,b)=>a.hp/a.maxhp-b.hp/b.maxhp)[0];
   // 성직자: 전체/단일 치유 우선
   if(u.cls==='cleric'){
@@ -1574,7 +1612,7 @@ function autoAct(u){
       healUnit(lowAlly, amt);
       blog(`<span class="em">${u.name}</span>의 ${sks[0].name}! ${lowAlly.name}이(가) <span class="good">${amt}</span> 회복.`);
       renderBattle();
-      return endTurn(560);
+      return endTurn(dly(560));
     }
   }
   // 전사: 다수전에서 도발
@@ -1589,25 +1627,32 @@ function autoAct(u){
     if(sk.type==='heal'||sk.type==='groupheal'||sk.type==='taunt') continue;
     if(sk.type==='aoe'){ if(enemies.length>1) return execAoe(u,i); continue; }
     u.cds[i]=sk.cd;
-    if(sk.type==='double'){ doAttack(u,tgt,sk.mult,{skill:sk.name}); if(tgt.alive) setTimeout(()=>{ if(!B.over&&tgt.alive) doAttack(u,tgt,sk.mult,{quiet:true}); },240); }
+    if(sk.type==='double'){ doAttack(u,tgt,sk.mult,{skill:sk.name}); if(tgt.alive) setTimeout(()=>{ if(!B.over&&tgt.alive) doAttack(u,tgt,sk.mult,{quiet:true}); },dly(240)); }
     else if(sk.type==='pierce') doAttack(u,tgt,sk.mult,{skill:sk.name,pierce:true,critBonus:sk.critBonus||25});
     else if(sk.type==='bleed'){ doAttack(u,tgt,sk.mult,{skill:sk.name}); if(tgt.alive) addStatus(tgt,'bleed',2,Math.max(2,Math.round(u.atk*0.35))); }
     else if(sk.type==='poison'){ doAttack(u,tgt,sk.mult,{skill:sk.name}); if(tgt.alive) addStatus(tgt,'poison',2,Math.max(2,Math.round(u.atk*0.35))); }
     else if(sk.type==='stun'){ doAttack(u,tgt,sk.mult,{skill:sk.name}); if(tgt.alive&&!tgt.boss) addStatus(tgt,'stun',1,0); }
     else doAttack(u,tgt,sk.mult,{skill:sk.name});
     renderBattle();
-    return endTurn(560);
+    return endTurn(dly(560));
   }
   doAttack(u, tgt, 1, {});
   renderBattle();
-  endTurn(560);
+  endTurn(dly(560));
 }
 function checkBattleEnd(){
   if(B.over) return true;
-  if(!alive('enemy').length){ B.over=true; setTimeout(()=>endBattle(true), 800); return true; }
-  if(!alive('party').length){ B.over=true; setTimeout(()=>endBattle(false), 800); return true; }
+  if(!alive('enemy').length){ B.over=true; setTimeout(()=>endBattle(true), dly(800)); return true; }
+  if(!alive('party').length){ B.over=true; setTimeout(()=>endBattle(false), dly(800)); return true; }
   return false;
 }
+$('#btnSpeed').addEventListener('click', ()=>{
+  if(!B) return;
+  B.fast = !B.fast;
+  M.fast = B.fast; saveMeta();
+  $('#speedState').textContent = B.fast?'2×':'1×';
+  SFX.click();
+});
 $('#btnAuto').addEventListener('click', ()=>{
   if(!B||B.over) return;
   B.auto = !B.auto;
@@ -1660,18 +1705,20 @@ function endBattle(victory, retreat){
   let levelUps = [];
   if(victory){
     S.stats.wins++;
-    const reward = Math.round(ct.reward * (1+R.goldMul));
+    let reward = Math.round(ct.reward * (1+R.goldMul));
+    if(S.nextRewardBonus){ reward = Math.round(reward*1.5); S.nextRewardBonus=false; lines.push('탈영병의 정보 — 보수 <b class="gold-text">+50%</b>'); }
     S.gold += reward;
     S.stats.goldEarned += reward;
     addRep(ct.rep);
     lines.push(`보수 <b class="gold-text">${fmt(reward)}🪙</b> 획득${R.goldMul?' (유물 보너스 포함)':''}`);
     lines.push(`명성 <b>+${ct.rep}🏅</b>`);
+    const expShare = Math.max(8, Math.round(ct.exp * 2.2 / Math.max(1, partyUnits.length) * (1+R.expMul)));
     partyUnits.forEach(u=>{
       if(!S.roster.includes(u.ref)) return; // 전사자는 제외
-      const ups = gainExp(u.ref, Math.round(ct.exp*(1+R.expMul)));
+      const ups = gainExp(u.ref, expShare);
       ups.forEach(lv=>levelUps.push(`${u.ref.name} — Lv.${lv} 달성!`));
     });
-    lines.push(`참전 단원 경험치 <b>+${Math.round(ct.exp*(1+R.expMul))}</b>`);
+    lines.push(`참전 단원 경험치 <b>+${expShare}</b> <span class="muted" style="font-size:12px">(인원수로 분배)</span>`);
     if(Math.random()<0.3){ S.potions++; lines.push('전리품: 치유 물약 <b>+1🧪</b>'); }
     chron(`「${ct.name}」 의뢰 완수. 보수 ${fmt(reward)}골드.`);
     SFX.win();
