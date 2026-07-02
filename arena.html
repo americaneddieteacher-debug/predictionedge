@@ -82,8 +82,9 @@ button{font-family:inherit;cursor:pointer}
 .run-head .stat{font-weight:800}
 .boardwrap{display:flex;flex-direction:column;gap:6px;margin:6px 0}
 .rowlabel{font-size:11px;color:var(--faint);letter-spacing:.1em;text-transform:uppercase;padding-left:2px}
-.slots{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.slots.bench{grid-template-columns:repeat(4,1fr)}
+.slots{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.slots.bench{grid-template-columns:repeat(5,1fr)}
+@media(max-width:480px){.slot,.ucard{min-height:84px}.ucard .e{font-size:23px}}
 .slot{min-height:96px;border:1px dashed var(--line2);border-radius:12px;display:flex;align-items:center;justify-content:center;position:relative;background:rgba(0,0,0,.15)}
 .slot.sel-target{border-color:var(--gold);box-shadow:0 0 0 2px rgba(224,176,76,.25);cursor:pointer}
 .ucard{width:100%;height:100%;min-height:96px;border-radius:12px;border:1.5px solid var(--line2);padding:6px 4px 5px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;cursor:pointer;background:linear-gradient(180deg,var(--panel3),var(--panel));position:relative;transition:transform .08s}
@@ -117,7 +118,15 @@ button{font-family:inherit;cursor:pointer}
 /* ===== battle ===== */
 .bfield{display:flex;flex-direction:column;gap:10px;margin:10px 0}
 .bside{display:flex;flex-direction:column;gap:6px}
-.bunits{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
+.bunits{display:grid;grid-template-columns:repeat(auto-fill,minmax(62px,1fr));gap:6px}
+/* ===== 마왕 스킬바 ===== */
+.spellbar{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin:2px 0 8px}
+.spellbar .mpd{font-weight:900;color:var(--purple);font-size:14px;min-width:52px}
+.spell{background:var(--panel3);border:1.5px solid var(--line2);border-radius:10px;padding:7px 10px;font-size:12.5px;font-weight:700;color:var(--ink);display:inline-flex;gap:5px;align-items:center;cursor:pointer}
+.spell .c{color:var(--purple);font-weight:900}
+.spell.armed{border-color:var(--gold);box-shadow:0 0 0 2px rgba(224,176,76,.35)}
+.spell:disabled{opacity:.3;cursor:not-allowed}
+#spell-hint{font-size:11.5px}
 .bcard{border:1.5px solid var(--line2);border-radius:10px;padding:5px 2px;display:flex;flex-direction:column;align-items:center;gap:2px;background:linear-gradient(180deg,var(--panel3),var(--panel));position:relative;min-height:78px;transition:transform .15s,opacity .3s}
 .bcard .e{font-size:24px;line-height:1}
 .bcard .bn{font-size:9.5px;color:var(--ink-dim);white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
@@ -127,6 +136,9 @@ button{font-family:inherit;cursor:pointer}
 .bcard .shield{position:absolute;top:2px;left:4px;font-size:9px;color:var(--blue);font-weight:800}
 .bcard.dead{opacity:.15;filter:grayscale(1)}
 .bcard.acting{transform:translateY(-5px) scale(1.06);border-color:var(--gold);z-index:2}
+.bcard.targetable{border-color:var(--gold);cursor:pointer;box-shadow:0 0 0 2px rgba(224,176,76,.4);animation:targetPulse 1s infinite alternate}
+@keyframes targetPulse{from{box-shadow:0 0 0 2px rgba(224,176,76,.25)}to{box-shadow:0 0 0 3px rgba(224,176,76,.6)}}
+#cmdpanel{padding:8px 12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 8px}
 .bcard.hit{animation:shake .3s}
 @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
 .dmgpop{position:absolute;top:-6px;left:50%;transform:translateX(-50%);font-weight:900;font-size:14px;color:var(--red);animation:pop .7s forwards;pointer-events:none;text-shadow:0 1px 3px #000}
@@ -252,12 +264,22 @@ footer{padding:16px 4px 22px;color:var(--faint);font-size:11.5px;text-align:cent
 <!-- ============ 전투 ============ -->
 <section class="screen" id="screen-battle">
   <div class="run-head"><div class="stat">라운드 <span id="b-round"></span></div><div class="vs" id="b-title">전투</div>
-    <button class="btn sm" id="btn-skip">⏩ 빨리감기</button></div>
+    <div style="display:flex;gap:6px"><button class="btn sm" id="btn-auto">🤖 자동: OFF</button>
+    <button class="btn sm" id="btn-skip">⏩ 빨리감기</button></div></div>
   <div class="bfield">
     <div class="bside"><div class="rowlabel">적군</div><div class="bunits" id="b-enemy"></div></div>
     <div class="vs">— VS —</div>
     <div class="bside"><div class="bunits" id="b-ally"></div><div class="rowlabel" style="text-align:right">아군</div></div>
   </div>
+  <div class="spellbar" id="spellbar">
+    <span class="mpd" id="b-mp">🔮 0</span>
+    <button class="spell" data-sp="fire" disabled>🔥 화염구 <span class="c">3</span></button>
+    <button class="spell" data-sp="heal" disabled>💚 재생 <span class="c">2</span></button>
+    <button class="spell" data-sp="freeze" disabled>❄️ 빙결 <span class="c">2</span></button>
+    <button class="spell" data-sp="wrath" disabled>⚡ 진노 <span class="c">5</span></button>
+    <span id="spell-hint" class="muted">마왕의 마력: 매 턴 +1</span>
+  </div>
+  <div class="panel" id="cmdpanel" style="display:none"></div>
   <div class="panel" id="blog"></div>
 </section>
 
@@ -299,6 +321,14 @@ const UNITS=[
  {id:"tiger",n:"백호",e:"🐯",f:"beast",t:5,atk:5,hp:8,role:"melee",ab:"행동마다 두 번 공격한다",say:"어흥. (두 번)"},
  {id:"kinglancer",n:"용병왕",e:"🤴",f:"human",t:5,atk:5,hp:9,role:"melee",ab:"시작 시 아군 전체 +1/+2 · 승리 시 🪙+2",say:"계약서에 사인은 검으로 하지"},
  {id:"spiritlord",n:"정령왕",e:"🌊",f:"spirit",t:5,atk:5,hp:9,role:"mage",ab:"행동 시 아군 전체 1 회복 + 무작위 적 2 피해",say:"만물이 나의 숨결이다"},
+ {id:"goblin",n:"고블린 새총꾼",e:"👺",f:"beast",t:1,atk:2,hp:2,role:"sniper",ab:"공격 시 30%로 대상 공격력 -1",say:"맞춰맞춰!"},
+ {id:"skelarcher",n:"해골 궁수",e:"🦴",f:"undead",t:2,atk:3,hp:3,role:"sniper",ab:"쓰러진 아군 1명당 공격력 +1",say:"뼈에 사무치게 쏜다"},
+ {id:"deer",n:"치유 사슴",e:"🦌",f:"beast",t:2,atk:1,hp:6,role:"support",ab:"행동 시 가장 다친 아군 2 회복",say:"…(반짝)"},
+ {id:"impbomber",n:"임프 폭격수",e:"🧨",f:"demon",t:3,atk:4,hp:3,role:"sniper",ab:"공격 시 화상 부여",say:"떨어진다아아!"},
+ {id:"windsp",n:"바람 정령",e:"🌪️",f:"spirit",t:3,atk:2,hp:5,role:"support",ab:"행동 시 아군 전체 보호막 +1",say:"휘이잉"},
+ {id:"gravepriest",n:"무덤 사제",e:"🕯️",f:"undead",t:3,atk:2,hp:6,role:"support",ab:"행동 시 가장 다친 아군 3 회복(언데드는 5)",say:"안식은 아직 이르다"},
+ {id:"pactdemon",n:"계약 악마",e:"📕",f:"demon",t:4,atk:2,hp:7,role:"support",ab:"행동 시 무작위 아군 공격력 +2",say:"서명하셨죠?"},
+ {id:"hunter",n:"현상금 사냥꾼",e:"🎯",f:"human",t:4,atk:5,hp:4,role:"sniper",ab:"적 처치 시 자신 공격력 +2",say:"수배서는 챙겼다"},
 ];
 const UNIT_BY_ID=Object.fromEntries(UNITS.map(u=>[u.id,u]));
 const SYNERGY={
@@ -308,6 +338,32 @@ const SYNERGY={
  spirit:{2:"매 턴 아군 전체 1 회복",4:"매 턴 2 회복"},
  human:{2:"승리 시 🪙 +1",4:"승리 시 🪙 +2, 시작 보호막 1"},
 };
+const ROLE_NAME={melee:"전사",sniper:"사수",mage:"술사",support:"지원"};
+const CLASS_SYN={
+ melee:{2:"전사 보호막 +2",4:"전사 보호막 +4"},
+ sniper:{2:"사수 공격력 +1",4:"사수 공격력 +3"},
+ mage:{2:"개전 시 적 전체 1 피해",4:"개전 시 적 전체 3 피해"},
+ support:{2:"회복량 +1",4:"회복량 +2 · 전체 보호막 +1"},
+};
+const GENERIC_ACTIVE={
+ melee:{n:"강타",cd:3,t:"enemy",d:"공격력 150% 피해"},
+ sniper:{n:"조준 사격",cd:3,t:"enemy",d:"공격력 200% 피해"},
+ mage:{n:"마력 폭발",cd:3,t:"enemy",d:"대상 150% + 무작위 적 50% 피해"},
+ support:{n:"응급 처치",cd:3,t:"ally",d:"대상 5 회복"},
+};
+const UNIQUE_ACTIVE={
+ archdemon:{n:"지옥불",cd:4,t:"none",d:"적 전체 화상 +2"},
+ lich:{n:"영혼 착취",cd:3,t:"enemy",d:"3 피해 + 자신 3 회복"},
+ icesp:{n:"절대 동결",cd:3,t:"enemy",d:"확정 빙결 + 100% 피해"},
+ paladin:{n:"수호의 맹세",cd:3,t:"ally",d:"대상 보호막 +4"},
+ wyvern:{n:"공중 강하",cd:3,t:"enemy",d:"공격력 200% 피해"},
+ demonking:{n:"군림",cd:4,t:"none",d:"적 전체 ATK -1, 아군 마족 ATK +1"},
+ dknight:{n:"사신의 낫",cd:4,t:"enemy",d:"200% 피해 + 화상 2"},
+ tiger:{n:"연격",cd:3,t:"enemy",d:"대상을 연속 2회 공격"},
+ kinglancer:{n:"왕의 격려",cd:4,t:"none",d:"아군 전체 ATK+1, HP+2"},
+ spiritlord:{n:"해일",cd:4,t:"none",d:"적 전체 2 피해 + 아군 전체 2 회복"},
+};
+function activeOf(f){return UNIQUE_ACTIVE[f.id]||GENERIC_ACTIVE[f.role]}
 const RELICS=[
  {id:"blood",e:"🩸",n:"피의 계약",d:"마족 공격력 +2"},
  {id:"necro",e:"📖",n:"네크로노미콘",d:"언데드 부활 시 HP 4로 부활"},
@@ -326,7 +382,7 @@ const TIER_ODDS={ // round -> [t1..t5] %
  5:[38,32,22,7,1],6:[32,30,26,10,2],7:[26,30,28,13,3],8:[20,28,30,17,5],
  9:[16,24,30,22,8],10:[13,22,30,25,10],11:[10,20,28,28,14],12:[8,18,26,30,18]};
 const TICKS=["마계 일보: 전 마왕, 아레나에서 아르바이트 목격…","용사 교단 '요즘 마왕들은 근성이 없다' 논평","슬라임 노조, 분열 수당 지급 요구","오늘의 시세: 영혼 1개 = 🪙 3 (보합)","백호 목격담, 사실은 큰 고양이였다","죽음의 기사, 산재 처리 기준 문의","아레나 관중석, 오늘도 매진","리치 회계사 모르그, 세금 0원 신고로 표창"];
-const TIPS=["같은 유닛 2장이면 별이 오릅니다. 3성이 목표죠, 폐하.","🪙 10마다 이자 1이 붙습니다. 다 쓰는 것도, 아끼는 것도 전략.","다음 상대를 정찰하고 편성을 바꾸십시오. 그게 머리 쓰는 재미 아니겠습니까.","전열은 방패, 후열은 창. 궁수를 앞에 세우는 마왕은 없습니다.","시너지 2세트가 4세트보다 쌉니다. 두 종족 조합도 훌륭합니다.","연승 보너스가 있습니다. 이기는 김에 계속 이기십시오.","전설이 안 나온다고 계약서를 찢지 마십시오. 라운드가 오르면 확률도 오릅니다.","적도 자원입니다. 승리 후 계약서를 던져 영입하십시오 — 희귀할수록 잘 도망가지만요.","포획하려면 빈 자리가 필요합니다. 전투 전에 자리를 비워두는 것도 수입니다."];
+const TIPS=["같은 유닛 2장이면 별이 오릅니다. 3성이 목표죠, 폐하.","🪙 10마다 이자 1이 붙습니다. 다 쓰는 것도, 아끼는 것도 전략.","다음 상대를 정찰하고 편성을 바꾸십시오. 그게 머리 쓰는 재미 아니겠습니까.","전열은 방패, 후열은 창. 궁수를 앞에 세우는 마왕은 없습니다.","시너지 2세트가 4세트보다 쌉니다. 두 종족 조합도 훌륭합니다.","연승 보너스가 있습니다. 이기는 김에 계속 이기십시오.","전설이 안 나온다고 계약서를 찢지 마십시오. 라운드가 오르면 확률도 오릅니다.","적도 자원입니다. 승리 후 계약서를 던져 영입하십시오 — 희귀할수록 잘 도망가지만요.","전투 중 유닛의 ✨스킬은 쿨다운이 돌면 강력합니다. 아껴 뒀다 급소에 꽂으십시오.","마왕 스킬(🔮)은 유닛 턴을 소모하지 않습니다. 화염구로 마무리, 빙결로 위협 차단.","포획하려면 빈 자리가 필요합니다. 전투 전에 자리를 비워두는 것도 수입니다."];
 const ADVICE=["패배도 회계상으론 '경험 자산'입니다.","마정석은 죽어도 남습니다. 폐하의 위엄과 달리요.","도감을 채우면 뿌듯합니다. 제가 그렇습니다.","영구 계약부터 사시죠. 복리는 마법보다 강합니다."];
 const META_UPGRADES=[
  {id:"gold1",n:"군자금 I",d:"시작 🪙 +2",cost:10},
@@ -358,7 +414,7 @@ let run=null, selected=null, battleSpeed=1;
 function newRun(){
  const startGold=8+(meta.upgrades.gold1?2:0)+(meta.upgrades.gold2?2:0);
  run={v:1,round:1,gold:startGold,lives:3+(meta.upgrades.heart?1:0),streak:0,wins:0,
-  board:Array(6).fill(null),bench:Array(4).fill(null),shop:[],sold:[],relics:[],
+  board:Array(8).fill(null),bench:Array(5).fill(null),shop:[],sold:[],relics:[],
   rerollsUsed:0,summonReady:false,summonPity:0,enemy:null,phase:"shop"};
  rollShop(); run.enemy=genEnemy(run.round);
  if(meta.upgrades.relicstart){offerRelic(()=>{startRound()})}else startRound();
@@ -398,15 +454,28 @@ function buyUnit(i){
  const id=run.shop[i],u=UNIT_BY_ID[id],cost=TIER_COST[u.t];
  if(run.sold[i])return;
  if(run.gold<cost){flashAction("🪙이 부족합니다!");return}
- const slot=findEmpty(); if(slot===null){flashAction("자리가 없습니다! 유닛을 팔거나 배치하세요.");return}
+ const slot=findEmpty();
+ if(slot===null){
+  const p=mergePartner(id,1);
+  if(p){run.gold-=cost;run.sold[i]=true;p.star++;recordDex(p);
+   flashAction(`✨ 자리 없이 바로 합성! ${u.n} ${"★".repeat(p.star)} 승급!`);
+   tryMerge();saveRun();renderShop();return}
+  flashAction("자리가 없습니다! (같은 유닛 ★1이 있으면 합성 구매는 가능)");return}
  run.gold-=cost;run.sold[i]=true;
  placeNew({uid:UID++,id,star:1},slot);
  tryMerge(); saveRun(); renderShop();
 }
 function findEmpty(){
- for(let i=0;i<4;i++)if(!run.bench[i])return{area:"bench",i};
- for(let i=0;i<6;i++)if(!run.board[i])return{area:"board",i};
+ for(let i=0;i<5;i++)if(!run.bench[i])return{area:"bench",i};
+ for(let i=0;i<8;i++)if(!run.board[i])return{area:"board",i};
  return null;
+}
+function mergePartner(id,star){return allOwned().find(x=>x.id===id&&x.star===star&&x.star<3)}
+function normalizeRun(r){
+ if(r.board&&r.board.length<8){const b=r.board;
+  r.board=[b[0]||null,b[1]||null,b[2]||null,null,b[3]||null,b[4]||null,b[5]||null,null]}
+ if(r.bench)while(r.bench.length<5)r.bench.push(null);
+ return r;
 }
 function placeNew(unit,slot){ (slot.area==="bench"?run.bench:run.board)[slot.i]=unit; recordDex(unit) }
 function recordDex(unit){const cur=meta.dex[unit.id]||0;if(unit.star>cur){meta.dex[unit.id]=unit.star;saveMeta()}}
@@ -421,8 +490,8 @@ function tryMerge(){
     flashAction(`✨ ${UNIT_BY_ID[a.id].n}이(가) ${"★".repeat(a.star)}로 승급!`);break}}}
 }
 function removeUnit(uid){
- for(let i=0;i<6;i++)if(run.board[i]&&run.board[i].uid===uid)run.board[i]=null;
- for(let i=0;i<4;i++)if(run.bench[i]&&run.bench[i].uid===uid)run.bench[i]=null;
+ for(let i=0;i<8;i++)if(run.board[i]&&run.board[i].uid===uid)run.board[i]=null;
+ for(let i=0;i<5;i++)if(run.bench[i]&&run.bench[i].uid===uid)run.bench[i]=null;
 }
 function sellPrice(u){return TIER_COST[UNIT_BY_ID[u.id].t]+(u.star-1)*2}
 function synCounts(){
@@ -434,14 +503,14 @@ function synCounts(){
 /* ================= 적 생성 ================= */
 const ENEMY_NAMES=["떠돌이 검투단","무덤 도굴꾼들","숲의 습격자","교단 토벌대","경쟁 마왕(자칭)","황금 투기단","북부 원정대","심연의 무리"];
 function genEnemy(round){
- const budget=6+round*3;
+ const budget=5+Math.floor(round*3.2);
  const maxTier=round<=2?1:round<=4?2:round<=6?3:round<=9?4:5;
  const theme=pick(Object.keys(FACTIONS));
  const pool=UNITS.filter(u=>u.t<=maxTier);
  const themed=pool.filter(u=>u.f===theme);
  const units=[];let spent=0;
- const starChance=round>=10?0.5:round>=7?0.35:round>=4?0.2:0;
- while(units.length<6&&spent<budget){
+ const starChance=round>=10?0.55:round>=7?0.4:round>=4?0.25:0;
+ while(units.length<8&&spent<budget){
   const src=(Math.random()<0.65&&themed.length)?themed:pool;
   const u=pick(src);const star=(Math.random()<starChance&&u.t<=3)?2:1;
   const cost=TIER_COST[u.t]*star;
@@ -461,9 +530,9 @@ function genEnemy(round){
 
 /* ================= 전투 시뮬 ================= */
 function makeFighter(u,team,slot){
- const base=UNIT_BY_ID[u.id];const m=u.star; // 1/2/3성 = x1/x2/x3
+ const base=UNIT_BY_ID[u.id];const m=u.star;
  return {uid:u.uid,id:u.id,n:base.n,e:base.e,f:base.f,role:base.role,star:u.star,team,slot,
-  atk:base.atk*m,hp:base.hp*m,maxhp:base.hp*m,shield:0,burn:0,frozen:false,
+  atk:base.atk*m,hp:base.hp*m,maxhp:base.hp*m,shield:0,burn:0,frozen:false,cd:2,healBonus:0,
   reviveFlag:base.id==="skel",usedRevive:false,alive:true};
 }
 function teamSynergy(fighters,relics){
@@ -472,13 +541,21 @@ function teamSynergy(fighters,relics){
 }
 function applyStartEffects(allies,foes,syn,log){
  const c=syn.counts,R=syn.relics;
- // 시너지
+ // 종족 시너지
  if((c.demon||0)>=2)allies.forEach(f=>{if(f.f==="demon")f.atk+=(c.demon>=4?3:1)});
  if((c.beast||0)>=2)allies.forEach(f=>{if(f.f==="beast"){f.hp+=(c.beast>=4?5:2);f.maxhp+=(c.beast>=4?5:2);if(c.beast>=4)f.atk+=1}});
  if((c.human||0)>=4)allies.forEach(f=>f.shield+=1);
  if((c.undead||0)>=2){const uds=allies.filter(f=>f.f==="undead");
   if(c.undead>=4)uds.forEach(f=>f.reviveFlag=true);
   else if(uds.length)pick(uds).reviveFlag=true;}
+ // 직업 시너지
+ const rc={};for(const f of allies)rc[f.role]=(rc[f.role]||0)+1;
+ if((rc.melee||0)>=2)allies.forEach(f=>{if(f.role==="melee")f.shield+=(rc.melee>=4?4:2)});
+ if((rc.sniper||0)>=2)allies.forEach(f=>{if(f.role==="sniper")f.atk+=(rc.sniper>=4?3:1)});
+ if((rc.support||0)>=2){const hb=rc.support>=4?2:1;allies.forEach(f=>f.healBonus=hb);
+  if(rc.support>=4)allies.forEach(f=>f.shield+=1)}
+ if((rc.mage||0)>=2){const amt=rc.mage>=4?3:1;foes.forEach(x=>{x.hp=Math.max(1,x.hp-amt)});
+  log(`🔮 술사들의 개전 포격! 적 전체 ${amt} 피해`)}
  // 유물
  if(R.includes("blood"))allies.forEach(f=>{if(f.f==="demon")f.atk+=2});
  if(R.includes("horn"))allies.forEach(f=>{if(f.f==="beast"){f.atk+=1;f.hp+=2;f.maxhp+=2}});
@@ -504,8 +581,164 @@ function targets(f,foes){
   return alive.reduce((a,b)=>a.hp<=b.hp?a:b);
  }
  if(f.role==="mage")return pick(alive);
- return alive[0]; // melee/support: 맨 앞
+ return alive[0];
 }
+function healAmt(src,base){let a=base+((src&&src.healBonus)||0);if(src&&src.team==="ally"&&hasRelic("tear"))a*=2;return a}
+function doHeal(t,src,base){if(!t||!t.alive)return 0;const a=healAmt(src,base);t.hp=Math.min(t.maxhp,t.hp+a);popup(t,"+"+a,"heal");return a}
+
+/* ===== 마왕 스킬 (전투 중 언제든) ===== */
+let B=null, autoPref=false;
+const DEVIL_SPELLS={fire:{cost:3,need:"enemy"},heal:{cost:2,need:"ally"},freeze:{cost:2,need:"enemy"},wrath:{cost:5,need:null}};
+function updateMp(){
+ const btns=document.querySelectorAll("#spellbar .spell");
+ if(!B){btns.forEach(b=>{b.disabled=true;b.classList.remove("armed")});return}
+ $("#b-mp").textContent="🔮 "+B.mp;
+ btns.forEach(b=>{b.disabled=B.mp<DEVIL_SPELLS[b.dataset.sp].cost});
+}
+function armSpell(sp){
+ if(!B)return;const s=DEVIL_SPELLS[sp];if(B.mp<s.cost)return;
+ if(!s.need){castDevil(sp,null);return}
+ B.armed=B.armed===sp?null:sp;
+ $("#spell-hint").textContent=B.armed?(s.need==="enemy"?"🎯 적 유닛을 클릭!":"🎯 아군 유닛을 클릭!"):"마왕의 마력: 매 턴 +1";
+ document.querySelectorAll("#spellbar .spell").forEach(b=>b.classList.toggle("armed",b.dataset.sp===B.armed));
+ refreshTargets();
+}
+function castDevil(sp,t){
+ const s=DEVIL_SPELLS[sp];if(!B||B.mp<s.cost)return;
+ B.mp-=s.cost;B.armed=null;
+ $("#spell-hint").textContent="마왕의 마력: 매 턴 +1";
+ document.querySelectorAll("#spellbar .spell").forEach(b=>b.classList.remove("armed"));
+ if(sp==="fire"){B.log("🔥 마왕이 직접 화염구를 던졌다!","sys");void dealDamage(t,5,null,B.allies,B.foes,B.log,"마왕의 화염구")}
+ if(sp==="heal"){const a=doHeal(t,{team:"ally",healBonus:0},6);B.log(`💚 마왕의 재생 — ${t.n} +${a}`,"sys")}
+ if(sp==="freeze"){t.frozen=true;B.log(`❄️ 마왕의 빙결 — ${t.n}의 다음 행동 봉인`,"sys")}
+ if(sp==="wrath"){B.log("⚡ 마왕의 진노가 전장을 덮친다!","sys");for(const e of B.foes.slice())if(e.alive)void dealDamage(e,2,null,B.allies,B.foes,B.log,"진노")}
+ renderBattle(B.allies,B.foes);updateMp();refreshTargets();
+}
+
+/* ===== 유닛 액티브 스킬 ===== */
+async function castActive(f,t){
+ const {allies,foes,log}=B;const act=activeOf(f);f.cd=act.cd;
+ const myTeam=f.team==="ally"?allies:foes;const enemyTeam=f.team==="ally"?foes:allies;
+ log(`✨ ${f.e} ${f.n}의 [${act.n}]!`,"sys");
+ const D=x=>Math.max(1,Math.ceil(x));
+ if(UNIQUE_ACTIVE[f.id]){
+  switch(f.id){
+   case "archdemon":for(const e of enemyTeam)if(e.alive)e.burn=(e.burn||0)+2;log("적 전체에 불이 붙었다!");break;
+   case "lich":await dealDamage(t,3,f,allies,foes,log,"영혼 착취");doHeal(f,f,3);break;
+   case "icesp":t.frozen=true;await dealDamage(t,D(f.atk),f,allies,foes,log,"절대 동결");break;
+   case "paladin":t.shield+=4;popup(t,"🛡+4","buff");break;
+   case "wyvern":await dealDamage(t,D(f.atk*2),f,allies,foes,log,"공중 강하");break;
+   case "demonking":for(const e of enemyTeam)if(e.alive)e.atk=Math.max(1,e.atk-1);
+    myTeam.forEach(x=>{if(x.alive&&x.f==="demon"){x.atk+=1}});log("마왕이 군림한다!");break;
+   case "dknight":await dealDamage(t,D(f.atk*2),f,allies,foes,log,"사신의 낫");if(t.alive)t.burn=(t.burn||0)+2;break;
+   case "tiger":await dealDamage(t,D(f.atk),f,allies,foes,log,"연격 1타");
+    if(t.alive)await dealDamage(t,D(f.atk),f,allies,foes,log,"연격 2타");break;
+   case "kinglancer":myTeam.forEach(x=>{if(x.alive){x.atk+=1;x.maxhp+=2;x.hp+=2;popup(x,"+1/+2","buff")}});break;
+   case "spiritlord":for(const e of enemyTeam.slice())if(e.alive)await dealDamage(e,2,null,allies,foes,log,"해일");
+    myTeam.forEach(x=>{if(x.alive)doHeal(x,f,2)});break;
+  }
+ } else {
+  switch(f.role){
+   case "melee":await dealDamage(t,D(f.atk*1.5),f,allies,foes,log,"강타");break;
+   case "sniper":await dealDamage(t,D(f.atk*2),f,allies,foes,log,"조준 사격");break;
+   case "mage":{await dealDamage(t,D(f.atk*1.5),f,allies,foes,log,"마력 폭발");
+    const others=enemyTeam.filter(x=>x.alive&&x!==t);
+    if(others.length)await dealDamage(pick(others),D(f.atk*0.5),f,allies,foes,log,"여파");break}
+   case "support":doHeal(t,f,5);log(`${t.n}이(가) 회복했다`);break;
+  }
+ }
+ renderBattle(allies,foes);
+}
+/* ===== 유닛 기본(자동) 행동 ===== */
+async function defaultAction(f){
+ const {allies,foes,log}=B;const myTeam=f.team==="ally"?allies:foes;
+ if(f.role==="support"){
+  const hurt=myTeam.filter(x=>x.alive&&x.hp<x.maxhp);
+  const most=hurt.length?hurt.reduce((a,b)=>(a.maxhp-a.hp)>=(b.maxhp-b.hp)?a:b):null;
+  if(f.id==="watersp"&&most){doHeal(most,f,3);log(`${f.e} 물의 정령이 ${most.n}을(를) 회복`)}
+  else if(f.id==="deer"&&most){doHeal(most,f,2);log(`${f.e} 치유 사슴이 ${most.n}을(를) 회복`)}
+  else if(f.id==="gravepriest"&&most){doHeal(most,f,most.f==="undead"?5:3);log(`${f.e} 무덤 사제의 기도`)}
+  else if(f.id==="windsp"){myTeam.forEach(x=>{if(x.alive)x.shield+=1});log(`${f.e} 바람의 장막! 아군 보호막 +1`)}
+  else if(f.id==="pactdemon"){const alive=myTeam.filter(x=>x.alive);const t=pick(alive);t.atk+=2;popup(t,"ATK+2","buff");log(`${f.e} 계약 악마가 ${t.n}에게 힘을 빌려준다`)}
+  else if(f.id==="merchant"){const alive=myTeam.filter(x=>x.alive);const t=pick(alive);t.atk+=1;popup(t,"ATK+1","buff");log(`${f.e} 상인이 ${t.n}에게 투자한다`)}
+  else await basicAttack(f,allies,foes,log);
+ } else {
+  await basicAttack(f,allies,foes,log);
+  if(f.id==="tiger"&&f.alive){const enemyTeam=f.team==="ally"?foes:allies;
+   if(enemyTeam.some(x=>x.alive)){await sleep(160/battleSpeed);await basicAttack(f,allies,foes,log)}}
+  if(f.id==="spiritlord"){myTeam.forEach(x=>{if(x.alive)x.hp=Math.min(x.maxhp,x.hp+1)})}
+ }
+}
+async function aiAct(f){
+ const {allies,foes}=B;
+ const myTeam=f.team==="ally"?allies:foes;const enemyTeam=f.team==="ally"?foes:allies;
+ const act=activeOf(f);
+ if(f.cd<=0&&act){
+  if(act.t==="none"){await castActive(f,null);return}
+  if(act.t==="enemy"){const t=targets(f,enemyTeam);if(t){await castActive(f,t);return}}
+  if(act.t==="ally"){const hurt=myTeam.filter(x=>x.alive&&(x.maxhp-x.hp)>=4);
+   if(hurt.length){await castActive(f,hurt.reduce((a,b)=>(a.maxhp-a.hp)>=(b.maxhp-b.hp)?a:b));return}}
+ }
+ await defaultAction(f);
+}
+
+/* ===== 플레이어 지휘 ===== */
+function playerCommand(f){return new Promise(res=>{B.waiting={f,res};B.mode=null;showCmdPanel(f)})}
+function showCmdPanel(f){
+ const p=$("#cmdpanel");p.style.display="flex";
+ const act=activeOf(f);
+ p.innerHTML=`<b style="font-size:13px">▶ ${f.e} ${f.n}${f.star>1?"★"+f.star:""}</b>
+  <button class="btn sm gold" id="cmd-atk">⚔️ 공격</button>
+  <button class="btn sm purple" id="cmd-skill" ${f.cd>0?"disabled":""}>✨ ${act.n}${f.cd>0?` (쿨 ${f.cd})`:""}</button>
+  <button class="btn sm" id="cmd-ai">🌀 자동 행동</button>
+  <span class="muted" style="font-size:11px">${act.d}</span>
+  <span class="muted" id="cmd-hint" style="font-size:11px"></span>`;
+ $("#cmd-atk").onclick=()=>{B.mode={kind:"attack"};$("#cmd-hint").textContent="🎯 공격할 적을 클릭";refreshTargets()};
+ $("#cmd-skill").onclick=()=>{
+  if(f.cd>0)return;
+  if(act.t==="none"){execCmd(()=>castActive(f,null));return}
+  B.mode={kind:"skill"};$("#cmd-hint").textContent=act.t==="enemy"?"🎯 대상 적을 클릭":"🎯 대상 아군을 클릭";refreshTargets();
+ };
+ $("#cmd-ai").onclick=()=>execCmd(()=>defaultAction(f));
+}
+function hideCmd(){const p=$("#cmdpanel");if(p){p.style.display="none";p.innerHTML=""}}
+function execCmd(fn){
+ const w=B&&B.waiting;if(!w)return;
+ B.waiting=null;B.mode=null;hideCmd();clearTargets();
+ Promise.resolve(fn()).then(()=>{if(B)renderBattle(B.allies,B.foes);w.res()});
+}
+function validCmdTargets(){
+ if(!B)return [];
+ if(B.armed){const s=DEVIL_SPELLS[B.armed];return (s.need==="enemy"?B.foes:B.allies).filter(x=>x.alive)}
+ if(B.waiting&&B.mode){
+  const f=B.waiting.f;
+  if(B.mode.kind==="attack"){let list=B.foes.filter(x=>x.alive);
+   if(f.role==="melee"){const front=list.filter(x=>x.slot<4);if(front.length)list=front}
+   return list}
+  const act=activeOf(f);
+  return (act.t==="enemy"?B.foes:B.allies).filter(x=>x.alive);
+ }
+ return [];
+}
+function refreshTargets(){clearTargets();for(const t of validCmdTargets()){const c=bDomMap[t.uid];if(c)c.classList.add("targetable")}}
+function clearTargets(){document.querySelectorAll(".bcard.targetable").forEach(c=>c.classList.remove("targetable"))}
+function onBattleCardClick(f){
+ if(!B||!f.alive)return;
+ if(B.armed){
+  const s=DEVIL_SPELLS[B.armed];
+  if(s.need==="enemy"&&f.team!=="enemy")return;
+  if(s.need==="ally"&&f.team!=="ally")return;
+  castDevil(B.armed,f);return;
+ }
+ if(B.waiting&&B.mode){
+  if(!validCmdTargets().some(x=>x.uid===f.uid))return;
+  const actor=B.waiting.f;
+  if(B.mode.kind==="attack")execCmd(()=>basicAttack(actor,B.allies,B.foes,B.log,f));
+  else execCmd(()=>castActive(actor,f));
+ }
+}
+function updateAutoBtn(){const b=$("#btn-auto");if(b)b.textContent="🤖 자동: "+(autoPref?"ON":"OFF")}
+
 async function runBattle(){
  run.phase="battle";saveRun();
  showScreen("battle");
@@ -517,78 +750,66 @@ async function runBattle(){
  const log=(msg,cls)=>{const p=document.createElement("p");if(cls)p.className=cls;p.textContent=msg;logEl.appendChild(p);logEl.scrollTop=logEl.scrollHeight};
  const allies=run.board.map((u,i)=>u?makeFighter(u,"ally",i):null).filter(Boolean);
  const foes=en.units.map((u,i)=>makeFighter(u,"enemy",i));
- const synA=teamSynergy(allies.map(f=>f),run.relics);
+ B={allies,foes,log,mp:2,armed:null,auto:autoPref,waiting:null,mode:null,turn:0};
+ updateAutoBtn();
+ const synA=teamSynergy(allies,run.relics);
  const synB=teamSynergy(foes,[]);
  applyStartEffects(allies,foes,synA,log);
  applyStartEffects(foes,allies,synB,()=>{});
- renderBattle(allies,foes);
- log("⚔️ 전투 개시!","sys");
+ renderBattle(allies,foes);updateMp();
+ log("⚔️ 전투 개시! 아군 턴마다 행동을 지시하세요. 마왕 스킬(하단)은 언제든 사용 가능.","sys");
  const flavored=allies.length?pick(allies):null;
  if(flavored)log(`${flavored.e} ${flavored.n}: "${UNIT_BY_ID[flavored.id].say}"`,"flavor");
- await sleep(600/battleSpeed);
- let turn=0;
- const healMult=hasRelic("tear")?2:1;
- while(turn<40&&allies.some(f=>f.alive)&&foes.some(f=>f.alive)){
-  turn++;
-  // 정령 시너지 턴 회복
+ await sleep(500/battleSpeed);
+ while(B.turn<40&&allies.some(f=>f.alive)&&foes.some(f=>f.alive)){
+  B.turn++;
+  B.mp=Math.min(10,B.mp+1);updateMp();
   for(const [team,syn] of [[allies,synA],[foes,synB]]){
-   const c=syn.counts;if((c.spirit||0)>=2){const amt=(c.spirit>=4?2:1)*(team===allies?healMult:1);
+   const c=syn.counts;if((c.spirit||0)>=2){const amt=(c.spirit>=4?2:1)*((team===allies&&hasRelic("tear"))?2:1);
     team.forEach(f=>{if(f.alive)f.hp=Math.min(f.maxhp,f.hp+amt)})}}
-  // 행동 순서: 아군/적군 번갈아 슬롯 순
   const order=[];
   const aAlive=allies.filter(f=>f.alive),fAlive=foes.filter(f=>f.alive);
   const maxLen=Math.max(aAlive.length,fAlive.length);
   for(let i=0;i<maxLen;i++){if(aAlive[i])order.push(aAlive[i]);if(fAlive[i])order.push(fAlive[i])}
   for(const f of order){
    if(!f.alive)continue;
-   const myTeam=f.team==="ally"?allies:foes;
    const enemyTeam=f.team==="ally"?foes:allies;
    if(!enemyTeam.some(x=>x.alive))break;
-   // 화상
    if(f.burn>0){await dealDamage(f,f.burn,null,allies,foes,log,"🔥화상");f.burn=Math.max(0,f.burn-1);if(!f.alive)continue}
    if(f.frozen){f.frozen=false;log(`${f.e} ${f.n}은(는) 얼어서 움직이지 못한다!`);continue}
+   if(f.cd>0)f.cd--;
    markActing(f,true);
-   if(f.role==="support"){
-    if(f.id==="watersp"){const hurt=myTeam.filter(x=>x.alive&&x.hp<x.maxhp);
-     if(hurt.length){const t=hurt.reduce((a,b)=>(a.maxhp-a.hp)>=(b.maxhp-b.hp)?a:b);
-      const amt=3*(f.team==="ally"?healMult:1);t.hp=Math.min(t.maxhp,t.hp+amt);
-      popup(t,"+"+amt,"heal");log(`${f.e} 물의 정령이 ${t.n}을(를) ${amt} 회복`)}
-     else{await basicAttack(f,allies,foes,log)}}
-    else if(f.id==="merchant"){const alive=myTeam.filter(x=>x.alive);const t=pick(alive);
-     t.atk+=1;popup(t,"ATK+1","buff");log(`${f.e} 상인이 ${t.n}에게 투자한다 (ATK+1)`)}
-    else await basicAttack(f,allies,foes,log);
-   } else {
-    await basicAttack(f,allies,foes,log);
-    if(f.id==="tiger"&&f.alive&&enemyTeam.some(x=>x.alive)){await sleep(180/battleSpeed);await basicAttack(f,allies,foes,log)}
-    if(f.id==="spiritlord"){const amt=1*(f.team==="ally"?healMult:1);
-     myTeam.forEach(x=>{if(x.alive)x.hp=Math.min(x.maxhp,x.hp+amt)})}
-   }
+   if(f.team==="ally"&&!B.auto){await playerCommand(f)}
+   else{await aiAct(f)}
    markActing(f,false);
    renderBattle(allies,foes);
    if(!allies.some(x=>x.alive)||!foes.some(x=>x.alive))break;
-   await sleep(260/battleSpeed);
+   await sleep((f.team==="ally"&&!B.auto?100:260)/battleSpeed);
   }
-  // 북 버프 해제 (첫 턴 종료)
-  if(turn===1)for(const f of allies)if(f.drumBuff){f.atk-=f.drumBuff;f.drumBuff=0}
+  if(B.turn===1)for(const f of allies)if(f.drumBuff){f.atk-=f.drumBuff;f.drumBuff=0}
  }
  const win=allies.some(f=>f.alive)&&!foes.some(f=>f.alive);
- const draw=!allies.some(f=>f.alive)&&!foes.some(f=>f.alive)||turn>=40;
+ const draw=!allies.some(f=>f.alive)&&!foes.some(f=>f.alive)||B.turn>=40;
+ hideCmd();clearTargets();B=null;updateMp();
  await sleep(400/battleSpeed);
  finishBattle(win,draw,allies,foes,log);
 }
-async function basicAttack(f,allies,foes,log){
+async function basicAttack(f,allies,foes,log,forced){
  const enemyTeam=f.team==="ally"?foes:allies;
- const t=targets(f,enemyTeam);if(!t)return;
+ const myTeam=f.team==="ally"?allies:foes;
+ const t=(forced&&forced.alive)?forced:targets(f,enemyTeam);if(!t)return;
  let dmg=f.atk;
+ if(f.id==="skelarcher")dmg+=myTeam.filter(x=>!x.alive).length;
  await dealDamage(t,dmg,f,allies,foes,log);
- // 공격 부가효과
  if(f.id==="imp"&&Math.random()<0.3){f.atk+=1;popup(f,"ATK+1","buff")}
  if(f.id==="hound")t.burn=(t.burn||0)+1;
+ if(f.id==="impbomber")t.burn=(t.burn||0)+1;
+ if(f.id==="goblin"&&t.alive&&Math.random()<0.3){t.atk=Math.max(1,t.atk-1);popup(t,"ATK-1","")}
  if(f.id==="succubus"&&t.alive){const steal=Math.min(1,Math.max(0,t.atk-1));if(steal){t.atk-=1;f.atk+=1;popup(f,"흡수","buff")}}
- if(f.id==="vamp"){const heal=Math.ceil(dmg/2)*(f.team==="ally"&&hasRelic("tear")?2:1);f.hp=Math.min(f.maxhp,f.hp+heal);popup(f,"+"+heal,"heal")}
+ if(f.id==="vamp"){const heal=Math.ceil(dmg/2);doHeal(f,f,heal)}
  if(f.id==="firesp"){const others=enemyTeam.filter(x=>x.alive&&x!==t);if(others.length){const o=pick(others);await dealDamage(o,2,f,allies,foes,log,"🔥")}}
  if(f.id==="icesp"&&t.alive&&Math.random()<0.4){t.frozen=true;log(`${t.e} ${t.n}이(가) 얼어붙었다!`)}
- // 반격
+ if(!t.alive&&f.id==="hunter"){f.atk+=2;popup(f,"ATK+2","buff")}
  if(t.alive&&t.id==="bear"&&f.alive){await dealDamage(f,2,t,allies,foes,log,"반격")}
 }
 async function dealDamage(t,dmg,src,allies,foes,log,label){
@@ -598,9 +819,8 @@ async function dealDamage(t,dmg,src,allies,foes,log,label){
  t.hp-=d;
  popup(t,"-"+dmg,"");hitFx(t);
  if(src)log(`${src.e} ${src.n} → ${t.e} ${t.n}에게 ${dmg} 피해${label?` (${label})`:""}`);
- else if(label)log(`${t.e} ${t.n}이(가) ${label}으로 ${dmg} 피해`);
+ else if(label)log(`${t.e} ${t.n}이(가) ${label}(으)로 ${dmg} 피해`);
  if(t.hp<=0){
-  // 부활 체크
   if(t.reviveFlag&&!t.usedRevive){t.usedRevive=true;
    const reviveHp=(t.team==="ally"&&hasRelic("necro"))?4:1;
    t.hp=reviveHp;log(`💫 ${t.n}이(가) 다시 일어난다! (HP ${reviveHp})`,"sys");renderBattle(allies,foes);return}
@@ -608,15 +828,12 @@ async function dealDamage(t,dmg,src,allies,foes,log,label){
   log(`☠️ ${t.n} 쓰러짐`);
   const myTeam=t.team==="ally"?allies:foes;
   const enemyTeam=t.team==="ally"?foes:allies;
-  // 사망 트리거
   if(t.id==="slime"){
-   const mf={uid:UID++,id:"minislime",n:"미니 슬라임",e:"🫧",f:"spirit",role:"melee",star:1,team:t.team,slot:t.slot,atk:1,hp:2,maxhp:2,shield:0,burn:0,frozen:false,alive:true,usedRevive:true};
+   const mf={uid:UID++,id:"minislime",n:"미니 슬라임",e:"🫧",f:"spirit",role:"melee",star:1,team:t.team,slot:t.slot,atk:1,hp:2,maxhp:2,shield:0,burn:0,frozen:false,cd:9,healBonus:0,alive:true,usedRevive:true};
    myTeam.push(mf);log(`🫧 슬라임이 분열했다!`)}
   if(t.id==="dknight"){for(const e of enemyTeam)if(e.alive)await dealDamage(e,4,null,allies,foes,log,"죽음의 폭발");
    myTeam.forEach(x=>{if(x.alive&&x.f==="undead"){x.atk+=2;popup(x,"ATK+2","buff")}})}
-  // 아군 사망 반응
   for(const m of myTeam)if(m.alive&&m.id==="lich"){for(const e of enemyTeam)if(e.alive)await dealDamage(e,2,null,allies,foes,log,"리치의 격노")}
-  // 적 사망 반응 (구울)
   for(const g of enemyTeam)if(g.alive&&g.id==="ghoul"){g.hp=Math.min(g.maxhp,g.hp+2);popup(g,"+2","heal")}
  }
 }
@@ -663,11 +880,12 @@ function showCapture(foes,done){
  const opts=[];while(opts.length<3&&pool.length){opts.push(pool.splice(rnd(pool.length),1)[0])}
  if(!opts.length){done();return}
  const noSpace=findEmpty()===null;
+ const canTake=f=>!noSpace||!!mergePartner(f.id,f.star);
  const box=$("#overlay-box");
  box.innerHTML=`<h3 style="margin:0 0 4px">📜 계약 포획 — 쓰러진 적과 계약을 시도하라!</h3>
   <p class="muted" style="font-size:12.5px;margin:0 0 6px">기회는 한 번. 희귀할수록, ★이 높을수록 잘 도망친다. 잡으면 ★등급 그대로 아군이 된다!</p>
-  ${noSpace?`<p class="red-text" style="font-size:12.5px">⚠️ 자리가 없어 포획할 수 없습니다. 다음엔 자리를 비워두세요.</p>`:""}
-  <div class="catch-grid">${opts.map((f,i)=>`<div class="catch-card" data-i="${i}" ${noSpace?'style="opacity:.35;pointer-events:none"':""}>
+  ${noSpace?`<p class="red-text" style="font-size:12.5px">⚠️ 자리가 꽉 찼습니다 — 같은 유닛·같은 ★을 보유한 대상만 합성 포획 가능.</p>`:""}
+  <div class="catch-grid">${opts.map((f,i)=>`<div class="catch-card" data-i="${i}" ${canTake(f)?"":'style="opacity:.35;pointer-events:none"'}>
     <div class="e">${f.e}</div><b>${f.n}${f.star>1?"★"+f.star:""}</b>
     <div class="desc">${UNIT_BY_ID[f.id].ab}</div><div class="pct">서명 확률 ${captureChance(f)}%</div></div>`).join("")}</div>
   <button class="btn ghost block" id="cap-skip">건너뛰기</button>`;
@@ -689,6 +907,9 @@ async function attemptCapture(f,done){
  if(ok){
   const slot=findEmpty();
   if(slot){placeNew({uid:UID++,id:f.id,star:f.star},slot);tryMerge()}
+  else{const p=mergePartner(f.id,f.star);
+   if(p){p.star++;recordDex(p);tryMerge()}
+   else run.gold+=TIER_COST[UNIT_BY_ID[f.id].t];}
   if(anim)anim.textContent="✒️";
   box.insertAdjacentHTML("beforeend",`<p style="text-align:center"><b class="green-text">✅ ${f.e} ${f.n}${f.star>1?"★"+f.star:""}이(가) 서명했다! 아군 합류!</b><br>
    <span class="muted" style="font-size:12px;font-style:italic">"${UNIT_BY_ID[f.id].say}"</span></p>
@@ -719,8 +940,6 @@ function endRun(cleared){
 function doSummon(){
  if(!run.summonReady)return;
  run.summonReady=false;
- const slot=findEmpty();
- if(slot===null){run.summonReady=true;flashAction("자리가 없습니다!");return}
  // 등급 롤 + 천장
  const pityLimit=meta.upgrades.circle?1:2;
  let odds=[0,40,32,18,10];
@@ -730,7 +949,6 @@ function doSummon(){
  if(t>=4)run.summonPity=0;else run.summonPity++;
  const u=pick(unitsOfTier(t));
  const unit={uid:UID++,id:u.id,star:1};
- placeNew(unit,slot);
  // 연출
  const box=$("#overlay-box");
  box.innerHTML=`<div id="summon-stage">
@@ -740,7 +958,14 @@ function doSummon(){
    <p class="muted" style="font-size:12px;font-style:italic">"${u.say}"</p>
    <button class="btn gold" id="summon-ok">획득!</button></div>`;
  $("#overlay").classList.add("on");
- $("#summon-ok").onclick=()=>{$("#overlay").classList.remove("on");tryMerge();saveRun();renderShop()};
+ $("#summon-ok").onclick=()=>{
+  $("#overlay").classList.remove("on");
+  const slot=findEmpty();
+  if(slot)placeNew(unit,slot);
+  else{const p=mergePartner(u.id,1);
+   if(p){p.star++;recordDex(p);flashAction(`✨ 자리 없이 바로 합성! ${u.n} ${"★".repeat(p.star)} 승급!`)}
+   else{run.gold+=TIER_COST[u.t];flashAction(`자리가 없어 🪙${TIER_COST[u.t]}(으)로 환전했다`)}}
+  tryMerge();saveRun();renderShop()};
 }
 
 /* ================= 유물 선택 ================= */
@@ -795,11 +1020,16 @@ function renderShop(){
  $("#e-hint").textContent=`${en.name}${en.boss?" (보스!)":""} — 주력: ${FACTIONS[en.theme].n}`;
  $("#e-preview").innerHTML=en.units.map(u=>{const b=UNIT_BY_ID[u.id];
   return `<span class="echip">${b.e} ${b.n}${u.star>1?"★"+u.star:""} <span class="muted">${b.atk*u.star}/${b.hp*u.star}</span></span>`}).join("");
- // 시너지
+ // 시너지 (종족 + 직업 2축)
  const c=synCounts();
- $("#syn-panel").innerHTML=Object.keys(FACTIONS).map(f=>{
+ const rc={};for(const u of run.board.filter(Boolean)){const r=UNIT_BY_ID[u.id].role;rc[r]=(rc[r]||0)+1}
+ const facChips=Object.keys(FACTIONS).map(f=>{
   const n=c[f]||0;const lvl=n>=4?"max":n>=2?"on":"";
   return `<span class="syn ${lvl}">${FACTIONS[f].n} ${n} <span style="opacity:.7">(${n>=4?SYNERGY[f][4]:n>=2?SYNERGY[f][2]:"2세트: "+SYNERGY[f][2]})</span></span>`}).join("");
+ const roleChips=Object.keys(ROLE_NAME).map(r=>{
+  const n=rc[r]||0;const lvl=n>=4?"max":n>=2?"on":"";
+  return `<span class="syn ${lvl}">${ROLE_NAME[r]} ${n} <span style="opacity:.7">(${n>=4?CLASS_SYN[r][4]:n>=2?CLASS_SYN[r][2]:"2세트: "+CLASS_SYN[r][2]})</span></span>`}).join("");
+ $("#syn-panel").innerHTML=facChips+roleChips;
  // 보드
  const renderSlots=(elId,arr,area,count)=>{
   const el=$(elId);el.innerHTML="";
@@ -810,9 +1040,9 @@ function renderShop(){
    d.onclick=()=>onSlotClick(area,i);
    el.appendChild(d);
   }};
- renderSlots("#row-front",run.board.slice(0,3),"front",3);
- renderSlots("#row-back",run.board.slice(3,6),"back",3);
- renderSlots("#row-bench",run.bench,"bench",4);
+ renderSlots("#row-front",run.board.slice(0,4),"front",4);
+ renderSlots("#row-back",run.board.slice(4,8),"back",4);
+ renderSlots("#row-bench",run.bench,"bench",5);
  // 상점
  $("#shop-row").innerHTML=run.shop.map((id,i)=>{const u=UNIT_BY_ID[id];
   return `<div class="shopcard ${TIER_CLASS[u.t]} ${run.sold[i]?"sold":""}" data-i="${i}">
@@ -828,7 +1058,7 @@ function renderShop(){
 }
 function onSlotClick(area,i){
  const arr=area==="bench"?run.bench:run.board;
- const idx=area==="front"?i:area==="back"?i+3:i;
+ const idx=area==="front"?i:area==="back"?i+4:i;
  const realArr=area==="bench"?run.bench:run.board;
  const u=realArr[idx];
  if(selected){
@@ -844,8 +1074,8 @@ function onSlotClick(area,i){
  if(u){selected=u;renderShop()}
 }
 function findUnitLoc(uid){
- for(let i=0;i<6;i++)if(run.board[i]&&run.board[i].uid===uid)return{area:"board",i};
- for(let i=0;i<4;i++)if(run.bench[i]&&run.bench[i].uid===uid)return{area:"bench",i};
+ for(let i=0;i<8;i++)if(run.board[i]&&run.board[i].uid===uid)return{area:"board",i};
+ for(let i=0;i<5;i++)if(run.bench[i]&&run.bench[i].uid===uid)return{area:"bench",i};
  return null;
 }
 function renderActionbar(){
@@ -871,7 +1101,7 @@ function renderBattle(allies,foes){
   if(!el.dataset.built){el.innerHTML="";el.dataset.built="1"}
   for(const f of list){
    let card=bDomMap[f.uid];
-   if(!card){card=document.createElement("div");card.className="bcard";bDomMap[f.uid]=card;el.appendChild(card)}
+   if(!card){card=document.createElement("div");card.className="bcard";bDomMap[f.uid]=card;el.appendChild(card);card.onclick=()=>onBattleCardClick(f)}
    card.innerHTML=`${f.shield>0?`<span class="shield">🛡${f.shield}</span>`:""}
     <div class="e">${f.e}</div><div class="bn">${f.n}${f.star>1?"★"+f.star:""}</div>
     <div class="batk"><span class="red-text">${f.atk}</span>/<span class="green-text">${Math.max(0,f.hp)}</span></div>
@@ -918,7 +1148,7 @@ function renderHub(){
 /* ================= 이벤트 바인딩 ================= */
 $("#btn-start").onclick=()=>{
  const saved=loadRun();
- if(saved){run=saved;selected=null;
+ if(saved){run=normalizeRun(saved);selected=null;
   if(run.phase==="battle"){run.phase="shop"} // 전투 중 저장은 상점으로 복귀
   showScreen("shop");renderShop();return}
  showScreen("hub");renderHub();
@@ -933,6 +1163,13 @@ $("#btn-summon").onclick=doSummon;
 $("#btn-fight").onclick=()=>{selected=null;bDomMap={};$("#b-ally").dataset.built="";$("#b-enemy").dataset.built="";
  $("#b-ally").innerHTML="";$("#b-enemy").innerHTML="";runBattle()};
 $("#btn-skip").onclick=()=>{battleSpeed=battleSpeed===1?4:1;$("#btn-skip").textContent=battleSpeed===1?"⏩ 빨리감기":"▶️ 보통 속도"};
+document.querySelectorAll("#spellbar .spell").forEach(b=>b.onclick=()=>armSpell(b.dataset.sp));
+$("#btn-auto").onclick=()=>{
+ autoPref=!autoPref;
+ if(B){B.auto=autoPref;
+  if(B.auto&&B.waiting){const w=B.waiting;B.waiting=null;B.mode=null;hideCmd();clearTargets();
+   aiAct(w.f).then(()=>{if(B)renderBattle(B.allies,B.foes);w.res()})}}
+ updateAutoBtn()};
 $("#btn-wipe").onclick=e=>{e.preventDefault();
  if(confirm("정말 모든 데이터를 초기화할까요?")){localStorage.removeItem("arena_meta");localStorage.removeItem("arena_run");location.reload()}};
 // 티커
