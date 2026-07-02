@@ -134,6 +134,9 @@ button{font-family:inherit;cursor:pointer}
 .bcard .hpbar{width:90%;height:5px;background:#3a1f1a;border-radius:99px;overflow:hidden}
 .bcard .hpbar>i{display:block;height:100%;background:linear-gradient(90deg,#d06a4c,#b8503f);transition:width .25s}
 .bcard .shield{position:absolute;top:2px;left:4px;font-size:9px;color:var(--blue);font-weight:800}
+.bcard .skillready{position:absolute;top:1px;right:3px;font-size:10px}
+.bcard .intent{font-size:9px;color:var(--red-soft);font-weight:800;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.ucard .tier-tag{position:absolute;top:4px;left:5px;font-size:9px;font-weight:800}
 .bcard.dead{opacity:.15;filter:grayscale(1)}
 .bcard.acting{transform:translateY(-5px) scale(1.06);border-color:var(--gold);z-index:2}
 .bcard.targetable{border-color:var(--gold);cursor:pointer;box-shadow:0 0 0 2px rgba(224,176,76,.4);animation:targetPulse 1s infinite alternate}
@@ -168,6 +171,10 @@ button{font-family:inherit;cursor:pointer}
 .catch-card .e{font-size:34px}
 .catch-card .desc{font-size:11px;color:var(--muted);min-height:28px;margin:4px 0}
 .catch-card .pct{font-size:13px;font-weight:900;color:var(--purple)}
+.rankbadge{font-size:10px;font-weight:900;border-radius:999px;padding:1px 8px;display:inline-block;margin-bottom:4px}
+.rankbadge.r1{background:linear-gradient(180deg,#e6bb58,#b8862b);color:#241a06}
+.rankbadge.r2{border:1px solid var(--line2);color:var(--ink-dim)}
+.rankbadge.r3{border:1px solid var(--line);color:var(--faint)}
 .contract{font-size:64px;display:inline-block}
 .contract.shaking{animation:contractShake .5s ease infinite}
 @keyframes contractShake{0%,100%{transform:rotate(0)}20%{transform:rotate(-9deg)}40%{transform:rotate(9deg)}60%{transform:rotate(-6deg)}80%{transform:rotate(6deg)}}
@@ -237,6 +244,7 @@ footer{padding:16px 4px 22px;color:var(--faint);font-size:11.5px;text-align:cent
   <div class="enemy-preview panel">
     <b style="font-size:13px">🔮 다음 상대 정찰</b> <span class="muted" style="font-size:12px" id="e-hint"></span>
     <div class="eline" id="e-preview"></div>
+    <div id="power-line" style="margin-top:7px;font-size:12.5px;font-weight:700"></div>
   </div>
   <div class="syn-panel" id="syn-panel"></div>
   <div class="boardwrap">
@@ -294,6 +302,7 @@ const FACTIONS={demon:{n:"마족",c:"#e06060"},undead:{n:"언데드",c:"#a678e0"
 const TIER_COST=[0,2,3,4,5,6];
 const TIER_NAME=["","일반","고급","희귀","영웅","전설"];
 const TIER_CLASS=["","t1","t2","t3","t4","t5"];
+const TIER_COLORS=["","#9aa0a6","#7fc470","#6fa8dc","#a678e0","#e0b04c"];
 // role: melee(전열 우선 공격)/sniper(최저HP 저격)/mage(무작위)/support(회복·버프)
 const UNITS=[
  {id:"imp",n:"임프",e:"😈",f:"demon",t:1,atk:2,hp:3,role:"melee",ab:"공격 시 30%로 자신 공격력 +1",say:"크킥, 월급은 영혼으로 받아요"},
@@ -413,7 +422,7 @@ function loadRun(){try{const r=JSON.parse(localStorage.getItem("arena_run"));if(
 let run=null, selected=null, battleSpeed=1;
 function newRun(){
  const startGold=8+(meta.upgrades.gold1?2:0)+(meta.upgrades.gold2?2:0);
- run={v:1,round:1,gold:startGold,lives:3+(meta.upgrades.heart?1:0),streak:0,wins:0,
+ run={v:1,round:1,gold:startGold,lives:2+(meta.upgrades.heart?1:0),streak:0,wins:0,
   board:Array(8).fill(null),bench:Array(5).fill(null),shop:[],sold:[],relics:[],
   rerollsUsed:0,summonReady:false,summonPity:0,enemy:null,phase:"shop"};
  rollShop(); run.enemy=genEnemy(run.round);
@@ -503,15 +512,15 @@ function synCounts(){
 /* ================= 적 생성 ================= */
 const ENEMY_NAMES=["떠돌이 검투단","무덤 도굴꾼들","숲의 습격자","교단 토벌대","경쟁 마왕(자칭)","황금 투기단","북부 원정대","심연의 무리"];
 function genEnemy(round){
- const budget=5+Math.floor(round*3.2);
+ const budget=6+Math.floor(round*3.6);
  const maxTier=round<=2?1:round<=4?2:round<=6?3:round<=9?4:5;
  const theme=pick(Object.keys(FACTIONS));
  const pool=UNITS.filter(u=>u.t<=maxTier);
  const themed=pool.filter(u=>u.f===theme);
  const units=[];let spent=0;
- const starChance=round>=10?0.55:round>=7?0.4:round>=4?0.25:0;
+ const starChance=round>=10?0.65:round>=7?0.5:round>=4?0.3:0.1;
  while(units.length<8&&spent<budget){
-  const src=(Math.random()<0.65&&themed.length)?themed:pool;
+  const src=(Math.random()<0.85&&themed.length)?themed:pool;
   const u=pick(src);const star=(Math.random()<starChance&&u.t<=3)?2:1;
   const cost=TIER_COST[u.t]*star;
   if(spent+cost>budget+2)break;
@@ -521,7 +530,8 @@ function genEnemy(round){
  // 보스 라운드 강화
  if(round===4||round===8||round===12){
   const bossPick=round===12?["demonking","dknight","tiger","kinglancer","spiritlord"]:["archdemon","lich","wyvern","paladin","icesp"];
-  units[0]={uid:UID++,id:pick(bossPick),star:round===12?2:1};
+  units[0]={uid:UID++,id:pick(bossPick),star:round>=8?2:1};
+  if(round===12&&units[1])units[1]={uid:UID++,id:units[1].id,star:Math.min(2,units[1].star+1)};
  }
  // 전열 우선 정렬: melee 먼저
  units.sort((a,b)=>{const ra=UNIT_BY_ID[a.id].role==="melee"?0:1,rb=UNIT_BY_ID[b.id].role==="melee"?0:1;return ra-rb});
@@ -608,10 +618,10 @@ function castDevil(sp,t){
  B.mp-=s.cost;B.armed=null;
  $("#spell-hint").textContent="마왕의 마력: 매 턴 +1";
  document.querySelectorAll("#spellbar .spell").forEach(b=>b.classList.remove("armed"));
- if(sp==="fire"){B.log("🔥 마왕이 직접 화염구를 던졌다!","sys");void dealDamage(t,5,null,B.allies,B.foes,B.log,"마왕의 화염구")}
- if(sp==="heal"){const a=doHeal(t,{team:"ally",healBonus:0},6);B.log(`💚 마왕의 재생 — ${t.n} +${a}`,"sys")}
+ if(sp==="fire"){const d=4+Math.floor(run.round/2);B.log("🔥 마왕이 직접 화염구를 던졌다!","sys");void dealDamage(t,d,null,B.allies,B.foes,B.log,"마왕의 화염구")}
+ if(sp==="heal"){const a=doHeal(t,{team:"ally",healBonus:0},5+Math.floor(run.round/3));B.log(`💚 마왕의 재생 — ${t.n} +${a}`,"sys")}
  if(sp==="freeze"){t.frozen=true;B.log(`❄️ 마왕의 빙결 — ${t.n}의 다음 행동 봉인`,"sys")}
- if(sp==="wrath"){B.log("⚡ 마왕의 진노가 전장을 덮친다!","sys");for(const e of B.foes.slice())if(e.alive)void dealDamage(e,2,null,B.allies,B.foes,B.log,"진노")}
+ if(sp==="wrath"){const d=1+Math.ceil(run.round/4);B.log("⚡ 마왕의 진노가 전장을 덮친다!","sys");for(const e of B.foes.slice())if(e.alive)void dealDamage(e,d,null,B.allies,B.foes,B.log,"진노")}
  renderBattle(B.allies,B.foes);updateMp();refreshTargets();
 }
 
@@ -767,6 +777,15 @@ async function runBattle(){
   for(const [team,syn] of [[allies,synA],[foes,synB]]){
    const c=syn.counts;if((c.spirit||0)>=2){const amt=(c.spirit>=4?2:1)*((team===allies&&hasRelic("tear"))?2:1);
     team.forEach(f=>{if(f.alive)f.hp=Math.min(f.maxhp,f.hp+amt)})}}
+  // 적 인텐트 (다음 행동 예고 — 수읽기 요소)
+  for(const f of foes)if(f.alive){
+   const act=activeOf(f);
+   const willSkill=f.cd<=1&&act;
+   let t=(willSkill&&act.t!=="enemy")?null:targets(f,allies);
+   if(willSkill&&act.t==="ally")t=null;
+   f.intent=(willSkill?"✨"+act.n:"⚔️공격")+(t?"→"+t.e:"");
+  }
+  renderBattle(allies,foes);
   const order=[];
   const aAlive=allies.filter(f=>f.alive),fAlive=foes.filter(f=>f.alive);
   const maxLen=Math.max(aAlive.length,fAlive.length);
@@ -881,12 +900,14 @@ function showCapture(foes,done){
  if(!opts.length){done();return}
  const noSpace=findEmpty()===null;
  const canTake=f=>!noSpace||!!mergePartner(f.id,f.star);
+ const badges=rankBadges(opts.map(f=>captureScore(f)));
  const box=$("#overlay-box");
  box.innerHTML=`<h3 style="margin:0 0 4px">📜 계약 포획 — 쓰러진 적과 계약을 시도하라!</h3>
   <p class="muted" style="font-size:12.5px;margin:0 0 6px">기회는 한 번. 희귀할수록, ★이 높을수록 잘 도망친다. 잡으면 ★등급 그대로 아군이 된다!</p>
   ${noSpace?`<p class="red-text" style="font-size:12.5px">⚠️ 자리가 꽉 찼습니다 — 같은 유닛·같은 ★을 보유한 대상만 합성 포획 가능.</p>`:""}
   <div class="catch-grid">${opts.map((f,i)=>`<div class="catch-card" data-i="${i}" ${canTake(f)?"":'style="opacity:.35;pointer-events:none"'}>
-    <div class="e">${f.e}</div><b>${f.n}${f.star>1?"★"+f.star:""}</b>
+    ${badges[i]}<div class="e">${f.e}</div><b>${f.n}${f.star>1?"★"+f.star:""}</b>
+    <div style="font-size:10px;color:${TIER_COLORS[UNIT_BY_ID[f.id].t]};font-weight:800">${TIER_NAME[UNIT_BY_ID[f.id].t]} · ${ROLE_NAME[f.role]} · ⚔️${f.atk} ❤️${f.maxhp}</div>
     <div class="desc">${UNIT_BY_ID[f.id].ab}</div><div class="pct">서명 확률 ${captureChance(f)}%</div></div>`).join("")}</div>
   <button class="btn ghost block" id="cap-skip">건너뛰기</button>`;
  $("#overlay").classList.add("on");
@@ -939,6 +960,7 @@ function endRun(cleared){
 /* ================= 운명의 소환 ================= */
 function doSummon(){
  if(!run.summonReady)return;
+ if(findEmpty()===null){flashAction("⚠️ 자리를 비워야 소환할 수 있습니다!");return}
  run.summonReady=false;
  // 등급 롤 + 천장
  const pityLimit=meta.upgrades.circle?1:2;
@@ -968,14 +990,50 @@ function doSummon(){
   tryMerge();saveRun();renderShop()};
 }
 
+/* ================= 추천 점수 ================= */
+function relicScore(id){
+ const units=run.board.filter(Boolean);
+ const cnt=f=>units.filter(u=>UNIT_BY_ID[u.id].f===f).length;
+ const rcnt=r=>units.filter(u=>UNIT_BY_ID[u.id].role===r).length;
+ switch(id){
+  case "blood":return 2+cnt("demon")*2;
+  case "necro":return 1+cnt("undead")*2;
+  case "horn":return 2+cnt("beast")*2;
+  case "tear":return 1+rcnt("support")*3+cnt("spirit");
+  case "seal":return 2+cnt("human")*2;
+  case "dice":return 6;
+  case "stone":return run.round>=6?7:5;
+  case "drum":return 3+units.length;
+  case "scale":return 6;
+  case "whet":return 2+units.length;
+  case "shackle":return 5;
+  default:return 4;
+ }
+}
+function captureScore(f){
+ const b=UNIT_BY_ID[f.id];
+ let v=b.t*8+(f.star-1)*18;
+ if(mergePartner(f.id,f.star))v+=15;
+ const facCount=run.board.filter(Boolean).filter(u=>UNIT_BY_ID[u.id].f===b.f).length;
+ if(facCount===1||facCount===3)v+=6;
+ return Math.round(v*captureChance(f)/100);
+}
+function rankBadges(scores){
+ // scores: 배열 — 순위(0=1위) 배열 반환
+ const order=scores.map((s,i)=>({s,i})).sort((a,b)=>b.s-a.s).map(x=>x.i);
+ const rank=Array(scores.length);order.forEach((idx,r)=>rank[idx]=r);
+ return rank.map(r=>r===0?`<span class="rankbadge r1">👑 추천</span>`:r===1?`<span class="rankbadge r2">2순위</span>`:`<span class="rankbadge r3">3순위</span>`);
+}
+
 /* ================= 유물 선택 ================= */
 function offerRelic(cb){
  const avail=RELICS.filter(r=>!run.relics.includes(r.id));
  const opts=[];while(opts.length<3&&avail.length){const r=pick(avail);if(!opts.includes(r))opts.push(r)}
+ const badges=rankBadges(opts.map(r=>relicScore(r.id)));
  const box=$("#overlay-box");
  box.innerHTML=`<h3 style="margin:0 0 4px">🏺 전리품 — 유물을 하나 고르십시오</h3>
-  <p class="muted" style="font-size:12.5px;margin:0 0 8px">유물은 이번 원정 내내 유지됩니다.</p>
-  <div class="choice3">${opts.map((r,i)=>`<div class="relic-card" data-i="${i}"><div class="e">${r.e}</div><b>${r.n}</b><div class="desc">${r.d}</div></div>`).join("")}</div>`;
+  <p class="muted" style="font-size:12.5px;margin:0 0 8px">유물은 이번 원정 내내 유지됩니다. 순위는 현재 편성 기준 모르그의 추천입니다.</p>
+  <div class="choice3">${opts.map((r,i)=>`<div class="relic-card" data-i="${i}">${badges[i]}<div class="e">${r.e}</div><b>${r.n}</b><div class="desc">${r.d}</div></div>`).join("")}</div>`;
  $("#overlay").classList.add("on");
  box.querySelectorAll(".relic-card").forEach(el=>el.onclick=()=>{
   run.relics.push(opts[+el.dataset.i].id);saveRun();
@@ -1005,6 +1063,7 @@ function showScreen(name){
 function unitCardHTML(u,extraCls){
  const b=UNIT_BY_ID[u.id];
  return `<div class="ucard ${TIER_CLASS[b.t]} ${extraCls||""}" data-uid="${u.uid}">
+  <span class="tier-tag" style="color:${TIER_COLORS[b.t]}">${TIER_NAME[b.t]}</span>
   <span class="fac" style="color:${FACTIONS[b.f].c}">${FACTIONS[b.f].n}</span>
   <div class="stars">${"★".repeat(u.star)}</div><div class="e">${b.e}</div>
   <div class="n">${b.n}</div><div class="st"><span class="red-text">${b.atk*u.star}</span>/<span class="green-text">${b.hp*u.star}</span></div></div>`;
@@ -1013,13 +1072,19 @@ function renderShop(){
  $("#s-round").textContent=run.round;
  $("#s-gold").textContent=run.gold;
  $("#s-streak").textContent=run.streak;
- $("#s-lives").textContent="❤️".repeat(run.lives)+"🖤".repeat(Math.max(0,(3+(meta.upgrades.heart?1:0))-run.lives));
+ $("#s-lives").textContent="❤️".repeat(run.lives)+"🖤".repeat(Math.max(0,(2+(meta.upgrades.heart?1:0))-run.lives));
  $("#s-relics").innerHTML=run.relics.map(id=>{const r=RELICS.find(x=>x.id===id);return `<span class="r" title="${r.n}: ${r.d}">${r.e}</span>`}).join("");
  // 적 미리보기
  const en=run.enemy;
  $("#e-hint").textContent=`${en.name}${en.boss?" (보스!)":""} — 주력: ${FACTIONS[en.theme].n}`;
  $("#e-preview").innerHTML=en.units.map(u=>{const b=UNIT_BY_ID[u.id];
   return `<span class="echip">${b.e} ${b.n}${u.star>1?"★"+u.star:""} <span class="muted">${b.atk*u.star}/${b.hp*u.star}</span></span>`}).join("");
+ const sum=(list,getU)=>list.reduce((a,x)=>{const b=UNIT_BY_ID[getU(x).id];const st=getU(x).star;return [a[0]+b.atk*st,a[1]+b.hp*st]},[0,0]);
+ const my=sum(run.board.filter(Boolean),u=>u), ev=sum(en.units,u=>u);
+ const myCls=my[0]>=ev[0]?"green-text":"red-text";
+ $("#power-line").innerHTML=`내 전력 <span class="${myCls}">⚔️${my[0]} ❤️${my[1]}</span>
+  <span class="muted">vs</span> 적 전력 <span class="gold-text">⚔️${ev[0]} ❤️${ev[1]}</span>
+  <span class="muted" style="font-weight:400;font-size:11px">(시너지·스킬 제외 기본치)</span>`;
  // 시너지 (종족 + 직업 2축)
  const c=synCounts();
  const rc={};for(const u of run.board.filter(Boolean)){const r=UNIT_BY_ID[u.id].role;rc[r]=(rc[r]||0)+1}
@@ -1046,12 +1111,17 @@ function renderShop(){
  // 상점
  $("#shop-row").innerHTML=run.shop.map((id,i)=>{const u=UNIT_BY_ID[id];
   return `<div class="shopcard ${TIER_CLASS[u.t]} ${run.sold[i]?"sold":""}" data-i="${i}">
+   <div style="font-size:9.5px;font-weight:900;color:${TIER_COLORS[u.t]}">${TIER_NAME[u.t]} · ${ROLE_NAME[u.role]}</div>
    <div class="e">${u.e}</div><div class="n">${u.n}</div>
    <div class="st"><span class="red-text">${u.atk}</span>/<span class="green-text">${u.hp}</span> · <span style="color:${FACTIONS[u.f].c}">${FACTIONS[u.f].n}</span></div>
    <div class="ab">${u.ab}</div><div class="cost">🪙 ${TIER_COST[u.t]}</div></div>`}).join("");
  document.querySelectorAll(".shopcard").forEach(el=>el.onclick=()=>buyUnit(+el.dataset.i));
  $("#reroll-cost").textContent=rerollCost()===0?"무료":rerollCost();
- $("#btn-summon").style.display=run.summonReady?"":"none";
+ const sumBtn=$("#btn-summon");
+ sumBtn.style.display=run.summonReady?"":"none";
+ const sumFull=findEmpty()===null;
+ sumBtn.disabled=sumFull;
+ sumBtn.textContent=sumFull?"✨ 운명의 소환 — 자리 필요!":"✨ 운명의 소환 (무료)";
  $("#btn-fight").disabled=!run.board.some(Boolean);
  $("#shop-tip").textContent=pick(TIPS);
  renderActionbar();
@@ -1082,7 +1152,12 @@ function renderActionbar(){
  const bar=$("#actionbar");
  if(!selected){bar.innerHTML=`<span class="muted" style="font-size:12px">유닛을 탭하면 선택, 다른 칸을 탭하면 이동/교체. 같은 유닛 2장이면 자동 승급!</span>`;return}
  const b=UNIT_BY_ID[selected.id];
- bar.innerHTML=`<span style="font-size:13px"><b>${b.e} ${b.n}${"★".repeat(selected.star)}</b> <span class="muted">${b.ab}</span></span>
+ const act=UNIQUE_ACTIVE[selected.id]||GENERIC_ACTIVE[b.role];
+ bar.innerHTML=`<span style="font-size:12.5px"><b>${b.e} ${b.n}${"★".repeat(selected.star)}</b>
+  <span style="color:${TIER_COLORS[b.t]};font-weight:800">${TIER_NAME[b.t]}</span> ·
+  <span style="color:${FACTIONS[b.f].c}">${FACTIONS[b.f].n}</span> ${ROLE_NAME[b.role]} ·
+  ⚔️${b.atk*selected.star} ❤️${b.hp*selected.star}<br>
+  <span class="muted">지속: ${b.ab} / ✨${act.n}: ${act.d}</span></span>
   <button class="btn sm red" id="act-sell">판매 +🪙${sellPrice(selected)}</button>
   <button class="btn sm ghost" id="act-cancel">취소</button>`;
  $("#act-sell").onclick=()=>{run.gold+=sellPrice(selected);removeUnit(selected.uid);selected=null;saveRun();renderShop()};
@@ -1101,11 +1176,14 @@ function renderBattle(allies,foes){
   if(!el.dataset.built){el.innerHTML="";el.dataset.built="1"}
   for(const f of list){
    let card=bDomMap[f.uid];
-   if(!card){card=document.createElement("div");card.className="bcard";bDomMap[f.uid]=card;el.appendChild(card);card.onclick=()=>onBattleCardClick(f)}
-   card.innerHTML=`${f.shield>0?`<span class="shield">🛡${f.shield}</span>`:""}
+   if(!card){card=document.createElement("div");
+    const bt=UNIT_BY_ID[f.id]?UNIT_BY_ID[f.id].t:1;
+    card.className="bcard "+TIER_CLASS[bt];bDomMap[f.uid]=card;el.appendChild(card);card.onclick=()=>onBattleCardClick(f)}
+   card.innerHTML=`${f.shield>0?`<span class="shield">🛡${f.shield}</span>`:""}${f.alive&&f.cd===0?`<span class="skillready" title="스킬 준비됨">✨</span>`:""}
     <div class="e">${f.e}</div><div class="bn">${f.n}${f.star>1?"★"+f.star:""}</div>
     <div class="batk"><span class="red-text">${f.atk}</span>/<span class="green-text">${Math.max(0,f.hp)}</span></div>
-    <div class="hpbar"><i style="width:${Math.max(0,f.hp/f.maxhp*100)}%"></i></div>`;
+    <div class="hpbar"><i style="width:${Math.max(0,f.hp/f.maxhp*100)}%"></i></div>
+    ${f.team==="enemy"&&f.alive&&f.intent?`<div class="intent">${f.intent}</div>`:""}`;
    card.classList.toggle("dead",!f.alive);
   }};
  draw("#b-ally",allies);draw("#b-enemy",foes);
