@@ -1,5 +1,20 @@
 # ibookk 출시 전 체크리스트 (사용자 작업용 — 쉬운 버전)
 
+> **2026-07-10 진행 현황**
+> - 1️⃣ 유출 비밀번호 차단 ✅ (Pro 전환 후 적용 확인)
+> - 2️⃣ Supabase Pro ✅
+> - 3️⃣ 클라우드 배포 ✅ — Vercel은 README에 기록된 알려진 한계(pnpm 모노레포 + 빌드 트레이싱)로 포기,
+>   **Railway로 전환 성공**: https://big-production-fdaf.up.railway.app (GET / → 200 확인)
+>   - 설정: Root Directory=`11-ibookk-os`, Railpack 빌더,
+>     `RAILPACK_BUILD_CMD=pnpm --filter @ibookk/web build`, `RAILPACK_START_CMD=pnpm --filter @ibookk/web start`,
+>     도메인 Target Port=3100
+>   - Vercel ibookk-web의 Git 연결 해제 완료(실패 알림 소음 제거)
+>   - ⚠️ AI 키 2개(ANTHROPIC_API_KEY, GOOGLE_AI_STUDIO_API_KEY)는 아직 미입력 → 홈PC .env.local에서 복사해
+>     Railway Variables에 추가해야 AI 기능(자동분류·세무 Q&A) 활성화
+>   - ⚠️ 며칠 안정 확인 후 홈PC :3100 서버 종료, SUPABASE_SERVICE_ROLE_KEY 로테이션 권장
+> - 4️⃣ BIG 세션 코드 작업 ⬜ (아래 프롬프트 그대로 사용)
+> - 5️⃣ 최종 점검 ⬜
+
 Claude가 할 수 있는 것은 전부 완료된 상태입니다 (DB 보안·성능·버그 수정, 마이그레이션 054~059).
 아래 5개만 순서대로 하시면 클로즈드 베타를 받을 수 있는 상태가 됩니다.
 
