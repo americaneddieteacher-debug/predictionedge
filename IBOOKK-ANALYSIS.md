@@ -44,6 +44,25 @@
 
 ## 2. 즉시 수정이 필요한 문제 (P0)
 
+> **✅ 2026-07-02 적용 완료**: 아래 2-1~2-4 및 추가 발견 버그 2건은 마이그레이션
+> `054_security_and_ledger_hardening`으로 **ibookk-os 프로덕션에 이미 적용·검증되었습니다**
+> (전체 SQL: `ibookk-fixes/054_security_and_ledger_hardening.sql` — BIG 저장소 마이그레이션
+> 디렉터리에 복사 필요). 보안 어드바이저 108건 → 48건, ERROR 0건. 검증: anon의
+> `plaid_items` 접근 permission denied 확인, BasisCheck 이메일 INSERT 정상, $999,999
+> draft 분개 주입 시 시산표 불변 확인.
+>
+> **추가로 발견·수정한 계산 버그 2건**
+> 1. `v_trial_balance` — LEFT JOIN ON절에 posted 필터가 있어 **draft/void 분개까지
+>    시산표에 합산되던 잠복 버그** (현재 데이터는 전부 posted라 아직 값이 틀어지진
+>    않았지만, 첫 draft가 생기는 순간 재무제표가 오염되는 구조). 서브쿼리 JOIN으로 재작성.
+> 2. `recompute_bill_paid`/`recompute_invoice_paid` — 결제를 전부 삭제(환불/취소)해도
+>    상태가 `paid`/`partial`에 고착되던 엣지 케이스. 결제액 0이면 `open` 복귀.
+>
+> **남은 수동 항목**: HaveIBeenPwned 토글(대시보드 1클릭), vector 확장 스키마 이동(앱
+> 코드와 동시 테스트 필요해 보류), TIN/계좌번호 암호화·Vercel 빌드 수정(BIG 저장소 접근 필요).
+> 참고: 분석 중 무료 플랜 자동 일시정지(INACTIVE)로 DB가 내려가 있던 것을 복구했습니다 —
+> 실서비스 전 Pro 전환이 필수인 이유입니다.
+
 ### 2-1. 🔴 RLS를 우회하는 뷰 — 보안 진단 유일한 ERROR
 `public.v_trial_balance` 뷰가 **SECURITY DEFINER**로 동작합니다. 뷰 소유자(postgres) 권한으로 실행되므로 RLS가 무력화되어, 이론상 **다른 조직의 시산표(전 재무제표의 원천)가 노출**될 수 있습니다.
 ```sql
