@@ -54,7 +54,12 @@ ibookk-fixes/ 폴더(README.md, 054 SQL, LAUNCH-CHECKLIST.md)를 먼저 읽어.
 3. tax_forms.recipient_tin, business_owners.tin, employees.direct_deposit_routing을
    기존 readSecret()/암호화 패턴으로 encrypt-on-write 전환
 4. tax_citations 7,819건의 임베딩(768차원) 생성 배치 실행
-5. Vercel 빌드 실패 원인(apps/web/noop.js) 정리
+5. (완료됨 — 건너뛰기) Vercel은 포기하고 Railway로 배포 완료. 대신 railway.json을
+   현 배포 설정(Root=11-ibookk-os, RAILPACK_BUILD_CMD/START_CMD)과 일치하게 정리
+6. ibookk-fixes/DESIGN.md의 디자인 시스템("Ledger Modern")대로 UI 전면 개편:
+   토큰·타이포(Public Sans + IBM Plex Mono)·대시보드 "처리가 필요한 3가지"·
+   AI 확신도 노출·세금 준비도 미터. 목업:
+   https://claude.ai/code/artifact/d8f3ea1b-b87b-4bc3-90cb-22d0e8d4e509
 전부 물어보지 말고 진행하고 결과만 알려줘.
 ```
 
