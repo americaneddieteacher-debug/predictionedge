@@ -10,6 +10,7 @@
 | `055_move_vector_extension` | pgvector를 `extensions` 스키마로 이동 (lint 0014 해소) |
 | `056_fix_match_tax_citations` | RAG 검색 함수가 삭제된 `irc_sections` 컬럼을 참조해 **호출 즉시 크래시**하던 버그 수정. 반환 필드가 `irc_sections text[]` → `url text`로 변경됨 (**앱 코드에서 RPC 결과 타입 업데이트 필요**). 추가로 대체(superseded)된 인용을 결과에서 제외 |
 | `057_rls_performance_hardening` | RLS 정책의 `auth.uid()/auth.role()` 행별 재평가 8건을 쿼리당 1회로 래핑, `FOR ALL` 쓰기 정책 13개를 INSERT/UPDATE/DELETE로 분리(SELECT 중복 평가 제거), 정책 `authenticated` 롤 한정 |
+| `058_seed_tax_strategies` + `059_dedupe_seeded_strategies` | 전략 카탈로그에 **기존에 없던 4개 추가** (`SCORP_REASONABLE_COMP`, `DE_MINIMIS_SAFE_HARBOR`, `HIRE_YOUR_KIDS`, `GA_RURAL_HOSPITAL_CREDIT`) — 인용 포함, conditions/formula는 엔진 DSL 확인 전까지 기본값. 최종 59개 (기존 55 + 신규 4). ⚠️ 참고: `list_tables`의 행 수는 플래너 추정치라 0으로 보였지만 실제로는 전략 55개·인용 7,819건·추천 27건이 이미 적재돼 있었음 — 분석 보고서의 "카탈로그 미탑재" 서술은 이 통계 착시였음 |
 
 ## 검증 결과
 - 보안 어드바이저: 108건 → **HaveIBeenPwned 토글 1건만 잔존** (나머지는 의도된 구조인 authenticated RLS 접근)
