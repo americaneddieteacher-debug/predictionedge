@@ -1,0 +1,78 @@
+/* ibookk design tokens — "Ledger Modern" v1
+   Drop into apps/web (e.g. app/tokens.css, imported in the root layout before globals).
+   Components must reference tokens (var(--…)) — never raw hex. */
+
+:root {
+  --paper: #F7F9F6;
+  --panel: #FFFFFF;
+  --panel-2: #F0F4EF;
+  --ink: #17231D;
+  --ink-2: #43544B;
+  --ink-3: #71827A;
+  --line: #DDE5DE;
+  --line-2: #C9D4CB;
+  --rule: #E7EDE7;
+  --brand: #135C48;
+  --brand-ink: #0C3D30;
+  --brand-soft: #E1EDE7;
+  --on-brand: #F2F7F3;
+  --ai: #8F6400;
+  --ai-soft: #F4EBD3;
+  --good: #256E46;  --good-soft: #E2F0E6;
+  --warn: #A05A12;  --warn-soft: #F6EAD8;
+  --crit: #A83A30;  --crit-soft: #F6E2DF;
+  --shadow: 0 1px 2px rgba(23,35,29,.06), 0 8px 24px rgba(23,35,29,.07);
+  --r: 10px;
+  --font-sans: 'Public Sans', -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #0D1411; --panel: #141D17; --panel-2: #18231C;
+    --ink: #E6EEE8; --ink-2: #A7B6AC; --ink-3: #75857B;
+    --line: #243129; --line-2: #314137; --rule: #1B2620;
+    --brand: #3D9B7E; --brand-ink: #63BFA2; --brand-soft: #173428; --on-brand: #0B1611;
+    --ai: #D9A93E; --ai-soft: #2E2410;
+    --good: #5DB284; --good-soft: #16301F;
+    --warn: #D9924A; --warn-soft: #33230F;
+    --crit: #DB7168; --crit-soft: #361713;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 10px 28px rgba(0,0,0,.35);
+  }
+}
+
+/* explicit user toggle must win over the media query in both directions */
+:root[data-theme="light"] {
+  --paper: #F7F9F6; --panel: #FFFFFF; --panel-2: #F0F4EF;
+  --ink: #17231D; --ink-2: #43544B; --ink-3: #71827A;
+  --line: #DDE5DE; --line-2: #C9D4CB; --rule: #E7EDE7;
+  --brand: #135C48; --brand-ink: #0C3D30; --brand-soft: #E1EDE7; --on-brand: #F2F7F3;
+  --ai: #8F6400; --ai-soft: #F4EBD3;
+  --good: #256E46; --good-soft: #E2F0E6;
+  --warn: #A05A12; --warn-soft: #F6EAD8;
+  --crit: #A83A30; --crit-soft: #F6E2DF;
+  --shadow: 0 1px 2px rgba(23,35,29,.06), 0 8px 24px rgba(23,35,29,.07);
+}
+:root[data-theme="dark"] {
+  --paper: #0D1411; --panel: #141D17; --panel-2: #18231C;
+  --ink: #E6EEE8; --ink-2: #A7B6AC; --ink-3: #75857B;
+  --line: #243129; --line-2: #314137; --rule: #1B2620;
+  --brand: #3D9B7E; --brand-ink: #63BFA2; --brand-soft: #173428; --on-brand: #0B1611;
+  --ai: #D9A93E; --ai-soft: #2E2410;
+  --good: #5DB284; --good-soft: #16301F;
+  --warn: #D9924A; --warn-soft: #33230F;
+  --crit: #DB7168; --crit-soft: #361713;
+  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 10px 28px rgba(0,0,0,.35);
+}
+
+/* app-wide ground: faint ledger ruling behind main content */
+.ledger-ruled {
+  background: repeating-linear-gradient(to bottom, transparent 0 27px, var(--rule) 27px 28px);
+}
+
+/* every money figure in the product */
+.figure {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
