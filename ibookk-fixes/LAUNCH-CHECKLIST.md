@@ -12,7 +12,12 @@
 >   - ⚠️ AI 키 2개(ANTHROPIC_API_KEY, GOOGLE_AI_STUDIO_API_KEY)는 아직 미입력 → 홈PC .env.local에서 복사해
 >     Railway Variables에 추가해야 AI 기능(자동분류·세무 Q&A) 활성화
 >   - ⚠️ 며칠 안정 확인 후 홈PC :3100 서버 종료, SUPABASE_SERVICE_ROLE_KEY 로테이션 권장
-> - 4️⃣ BIG 세션 코드 작업 ⬜ (아래 프롬프트 그대로 사용)
+> - 4️⃣ BIG 세션 코드 작업 🔶 진행 중 — **TIN/계좌 암호화는 완료 확인됨**(enc:v1 DB 제약 가동).
+>   남은 것: 마이그레이션 동기화, RAG 호출부(url), 임베딩 생성, railway.json 정리, UI 구현.
+>   신규: DB에 `form_7203_data(entity,year)`(검산 포함)와 `entity_1120s_readiness(entity,year)`
+>   함수 추가됨(061) — Taxes 화면과 준비도 미터를 이 RPC로 연결하면 됨.
+>   법률 문서 초안: ibookk-fixes/legal/ (변호사 검토 후 /privacy, /terms 마운트).
+>   출시 직전: ibookk-fixes/cleanup-test-data.sql로 테스트 계정 정리(사용자 결정).
 > - 5️⃣ 최종 점검 ⬜
 
 Claude가 할 수 있는 것은 전부 완료된 상태입니다 (DB 보안·성능·버그 수정, 마이그레이션 054~059).
