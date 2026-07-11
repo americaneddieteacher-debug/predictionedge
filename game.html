@@ -300,7 +300,7 @@ input{font-family:inherit}
       <button id="btnContinue" class="btn block" style="display:none">📜 이어서 하기</button>
     </div>
     <p class="title-meta" id="title-meta"></p>
-    <p class="title-foot">v2.2 · 자동 저장 · 회차·유산 시스템 · 모바일 지원</p>
+    <p class="title-foot">v2.3 · 자동 저장 · 회차·유산 시스템 · 모바일 지원</p>
   </section>
 
   <!-- ======== 본진(허브) ======== -->
@@ -678,6 +678,7 @@ const ACHS = [
   { id:'grade_s',   icon:'💎', name:'불패 신화',      desc:'아무도 쓰러지지 않고 엔딩 (S등급)' },
   { id:'iron_end',  icon:'🔥', name:'강철의 연대기',  desc:'도전 규칙을 켠 채 엔딩을 본다' },
   { id:'codex12',   icon:'📖', name:'괴물 박물학자',  desc:'도감에 12종 이상 기록한다' },
+  { id:'wave5',     icon:'🌊', name:'끝없는 전쟁',    desc:'잔당 토벌 5단계를 달성한다' },
 ];
 
 const HQ_UPGRADES = [
@@ -717,6 +718,7 @@ function checkAchs(){
   if(S.relics.length>=3) unlockAch('relic3');
   if(M.kills>=50) unlockAch('kill50');
   if(Object.keys(M.codex).length>=12) unlockAch('codex12');
+  if((M.bestWave||0)>=5) unlockAch('wave5');
 }
 
 /* ---------- 상태 ---------- */
@@ -731,7 +733,7 @@ function newState(name, challenges){
     roster:[], candidates:[], contracts:[], chron:[], relics:[], challenges:challenges||[],
     stats:{ battles:0, wins:0, kills:0, goldEarned:0, fallen:0 },
     storySeen:[], finalUnlocked:false, won:false, freePlay:false,
-    lastAidDay:-99, nextRewardBonus:false,
+    lastAidDay:-99, nextRewardBonus:false, raidWave:0,
   };
 }
 function hasChal(id){ return S && S.challenges.includes(id); }
@@ -802,9 +804,30 @@ function genContracts(){
     const exp = enemies.reduce((a,k)=>a+ENEMIES[k].exp,0);
     let reward = Math.round((30 + sum*2 * (0.9+Math.random()*0.3))/5)*5;
     if(hasChal('austere')) reward = Math.round(reward*0.7);
+    let repGain = t.tier*3 + rnd(3), expGain = exp, mod = null;
+    if(Math.random()<0.25){
+      mod = pick(CONTRACT_MODS);
+      if(mod.goldMul) reward = Math.round(reward*mod.goldMul/5)*5;
+      if(mod.repMul) repGain = Math.round(repGain*mod.repMul);
+      if(mod.expMul) expGain = Math.round(expGain*mod.expMul);
+    }
     list.push({
       id:contractSeq++, tier:t.tier, name:tpl.name, place:tpl.place, enemies,
-      reward, rep: t.tier*3 + rnd(3), exp,
+      reward, rep: repGain, exp: expGain, mod,
+    });
+  }
+  // 자유 모드: 잔당 토벌 (무한 도전 — 단계마다 강해진다)
+  if(S.won){
+    const wave = (S.raidWave||0)+1;
+    const pools = [['darkKnight','wraith','wraith'],['ogre','cultist','wraith'],['orcChief','darkKnight','cultist'],['darkKnight','darkKnight','cultist','wraith']];
+    let reward = 150 + wave*60;
+    if(hasChal('austere')) reward = Math.round(reward*0.7);
+    list.unshift({
+      id:contractSeq++, tier:5, raid:wave, scale:1+wave*0.12,
+      name:`검은 군단 잔당 토벌 — ${wave}단계`, place:'북부 폐허',
+      enemies: pools[(wave-1)%pools.length],
+      reward, rep:10+wave, exp:130+wave*30,
+      desc:`잔당은 단계마다 강해진다. (적 능력치 +${Math.round(wave*12)}%)`,
     });
   }
   S.contracts = list;
@@ -853,6 +876,7 @@ function load(){
       s.roster.concat(s.candidates||[]).forEach(m=>{ if(!m.row) m.row=CLASSES[m.cls].row; });
     }
     if(s.v!==2) return null;
+    if(s.raidWave==null) s.raidWave=0;
     mercSeq = Math.max(1,...s.roster.concat(s.candidates||[]).map(m=>m.id+1), 1);
     contractSeq = Math.max(1,...(s.contracts||[]).filter(c=>c.id!=='FINAL').map(c=>c.id+1), 1);
     return s;
@@ -993,7 +1017,8 @@ function viewContracts(){
       <div class="muted" style="font-size:12px">${ct.place} · <span class="stars">${stars}</span></div>
       <div class="enemy-preview">${ct.enemies.map(k=>ENEMIES[k].icon).join('')}</div>
       <div class="muted" style="font-size:12px">${ct.enemies.map(k=>ENEMIES[k].name).join(', ')}</div>
-      ${ct.final?`<div style="font-size:12.5px;color:var(--red-soft);margin-top:6px;font-weight:700">${ct.desc}</div>`:''}
+      ${ct.mod?`<div style="font-size:12px;color:var(--purple);margin-top:6px;font-weight:800">${ct.mod.icon} ${ct.mod.name} — ${ct.mod.desc}</div>`:''}
+      ${(ct.final||ct.raid)?`<div style="font-size:12.5px;color:var(--red-soft);margin-top:6px;font-weight:700">${ct.desc}</div>`:''}
       <div class="reward-row"><span class="gold-text">🪙 ${fmt(ct.reward)}</span><span>🏅 +${ct.rep}</span><span class="muted">EXP ${ct.exp} 분배</span></div>
       <div class="card-actions">
         <button class="btn sm gold" onclick="G.openDeploy('${ct.id}')" ${able?'':'disabled'}>⚔ 출정</button>
@@ -1098,6 +1123,7 @@ function viewRecords(){
     <div class="panel"><b>${M.endings||0}</b><span>달성한 엔딩</span></div>
     <div class="panel"><b>${fmt(M.kills)}</b><span>누적 처치</span></div>
     <div class="panel"><b>${M.legacy}</b><span>보유 유산</span></div>
+    <div class="panel"><b>${M.bestWave||0}단계</b><span>최고 잔당 토벌</span></div>
   </div>`;
 }
 
@@ -1293,7 +1319,7 @@ function startBattle(contract, mercIds){
     const st = mercStats(m);
     const critBonus = (contract.mod&&contract.mod.crit)||0;
     units.push({ uid:'m'+m.id, side:'party', ref:m, name:m.name, icon:CLASSES[m.cls].icon,
-      cls:m.cls, row:m.row, hp:m.hp, maxhp:st.hp, atk:st.atk, def:st.def, spd:st.spd, crit:st.crit,
+      cls:m.cls, row:m.row, hp:m.hp, maxhp:st.hp, atk:st.atk, def:st.def, spd:st.spd, crit:st.crit+critBonus,
       cds:[0,0], statuses:[], alive:m.hp>0 });
   });
   const counts = {};
@@ -1305,7 +1331,7 @@ function startBattle(contract, mercIds){
           mSpd = (contract.mod&&contract.mod.eSpd)||0, mHp = (contract.mod&&contract.mod.eHp)||1;
     const ehp = Math.round(e.hp*sc*mHp), eatk = Math.round(e.atk*sc)+mAtk;
     units.push({ uid:'e'+i, side:'enemy', ekey:k, name:e.name+(dup?' '+counts[k]:''), icon:e.icon,
-      hp:e.hp, maxhp:e.hp, atk:e.atk, def:e.def, spd:e.spd, crit:5,
+      hp:ehp, maxhp:ehp, atk:eatk, def:e.def, spd:e.spd+mSpd, crit:5,
       statuses:[], alive:true, boss:!!e.boss, ranged:!!e.ranged, caster:!!e.caster, heavy:!!e.heavy,
       enraged:false, intent:'attack' });
     M.codex[k]=true; // 도감 기록 (조우)
@@ -1738,6 +1764,12 @@ function endBattle(victory, retreat){
       ups.forEach(lv=>levelUps.push(`${u.ref.name} — Lv.${lv} 달성!`));
     });
     lines.push(`참전 단원 경험치 <b>+${expShare}</b> <span class="muted" style="font-size:12px">(인원수로 분배)</span>`);
+    if(ct.raid){
+      S.raidWave = ct.raid;
+      if((M.bestWave||0) < ct.raid){ M.bestWave = ct.raid; saveMeta(); }
+      lines.push(`🌊 잔당 토벌 <b class="gold-text">${ct.raid}단계</b> 달성! (최고 기록 ${M.bestWave}단계)`);
+      chron(`검은 군단 잔당 토벌 ${ct.raid}단계를 완수했다.`);
+    }
     if(Math.random()<0.3){ S.potions++; lines.push('전리품: 치유 물약 <b>+1🧪</b>'); }
     chron(`「${ct.name}」 의뢰 완수. 보수 ${fmt(reward)}골드.`);
     SFX.win();
