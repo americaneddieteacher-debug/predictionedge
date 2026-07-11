@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#0e0a1a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>마왕상회 — 마왕님의 아이템 상점 경영기</title>
 <meta name="description" content="폐업 위기의 마왕성을 구하라! 아이템을 매입하고, 손님과 흥정하고, 30일 안에 빚을 갚는 다크 판타지 상점 경영 게임.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👑</text></svg>">
@@ -21,9 +23,10 @@ body{
   margin:0; background:radial-gradient(1200px 800px at 50% -10%, #2a1a52 0%, var(--bg1) 45%, var(--bg0) 100%) fixed;
   color:var(--ink);
   font:15px/1.55 -apple-system,BlinkMacSystemFont,"Pretendard","Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif;
-  -webkit-font-smoothing:antialiased; overscroll-behavior:none;
+  -webkit-font-smoothing:antialiased; overscroll-behavior:none; -webkit-user-select:none; user-select:none;
 }
-button{font:inherit; color:inherit; cursor:pointer; border:0; background:none}
+button{font:inherit; color:inherit; cursor:pointer; border:0; background:none; touch-action:manipulation}
+input{-webkit-user-select:text; user-select:text}
 .app{max-width:520px; margin:0 auto; min-height:100dvh; display:flex; flex-direction:column; position:relative}
 
 /* ─── 공용 ─── */
@@ -236,8 +239,12 @@ input[type=range]{width:100%; accent-color:var(--gold); height:32px}
     <div class="title-btns">
       <button class="btn" id="btn-continue" style="display:none">이어하기</button>
       <button class="btn ghost" id="btn-new">처음부터</button>
+      <div style="display:flex; gap:10px">
+        <button class="btn ghost small" id="btn-title-dex" style="flex:1">📔 도감</button>
+        <button class="btn ghost small" id="btn-title-hall" style="flex:1">🏆 기록</button>
+      </div>
     </div>
-    <p class="title-foot">v1.2 · 자동 저장 · 세계 랭킹 지원</p>
+    <p class="title-foot">v1.3 · 자동 저장 · 세계 랭킹 지원</p>
   </div>
 
   <!-- 상단바 -->
@@ -522,7 +529,10 @@ function bgmTick(){
   if (ni===0) bgmNote(BGM_PROG[bar][0]/2, 1.9, "sine", 0.05);
   bgmStep++;
 }
-function bgmStart(){ if (!bgmTimer) bgmTimer = setInterval(bgmTick, 480); }
+function bgmStart(){
+  try{ AC = AC || new (window.AudioContext||window.webkitAudioContext)(); if (AC.state==="suspended") AC.resume(); }catch(e){}
+  if (!bgmTimer) bgmTimer = setInterval(bgmTick, 480);
+}
 
 
 /* ─── 상태 ─── */
@@ -552,7 +562,12 @@ function wipe(){ try{ localStorage.removeItem(SAVE_KEY); }catch(e){} }
 const META_KEY = "maowang_meta_v1";
 let M = (function(){
   const def = {dex:{}, ach:[], endings:[], name:"", rec:{maxGold:0, bestSale:0, clears:0, endlessBestDay:0, clearGold:0}};
-  try{ return Object.assign(def, JSON.parse(localStorage.getItem(META_KEY)||"{}")); }catch(e){ return def; }
+  try{
+    const raw = JSON.parse(localStorage.getItem(META_KEY)||"{}") || {};
+    const m = Object.assign({}, def, raw);
+    m.rec = Object.assign({}, def.rec, raw.rec||{});
+    return m;
+  }catch(e){ return def; }
 })();
 function saveMeta(){ try{ localStorage.setItem(META_KEY, JSON.stringify(M)); }catch(e){} }
 function dexAdd(id, price){
@@ -720,7 +735,11 @@ function renderBuy(){
   $("#buy-inv-cap").textContent = `${S.inv.length}/${invCap()}칸`;
   renderInvGrid($("#buy-inv"), null);
   $("#btn-refresh").disabled = S.refreshed || S.gold<100;
-  sticky([{label:"🕯️ 영업 시작 →", id:"btn-open-shop", fn:()=>{ if(!S.inv.length){toast("팔 물건이 하나도 없어요!"); return;} startSell(); }}]);
+  sticky([{label:"🕯️ 영업 시작 →", id:"btn-open-shop", fn:()=>{
+    const cheapest = Math.min(...S.offers.filter(o=>!o.sold).map(o=>o.cost), Infinity);
+    if (!S.inv.length && S.gold >= cheapest){ toast("팔 물건이 하나도 없어요! 먼저 매입하세요"); return; }
+    startSell();
+  }}]);
   renderTop();
 }
 $("#btn-refresh").onclick = ()=>{
@@ -786,8 +805,8 @@ function nextCustomer(){
   if (!S.inv.length){
     renderSellFrame();
     $("#cust-area").innerHTML = `<div class="cust-card" style="text-align:center; padding:30px 16px">
-      <div style="font-size:40px">🧹</div><p class="muted" style="margin:10px 0 0">재고가 모두 팔렸습니다! 완판이에요.</p></div>`;
-    unlockAch("soldout","완판! 재고를 모두 팔았다");
+      <div style="font-size:40px">🧹</div><p class="muted" style="margin:10px 0 0">${S.dayStat.sold>0?"재고가 모두 팔렸습니다! 완판이에요.":"진열대가 텅 비었다… 내일을 기약하자."}</p></div>`;
+    if (S.dayStat.sold >= 5) unlockAch("soldout","완판! 재고를 모두 팔았다");
     sticky([{label:"🌙 조기 마감하고 정산 →", id:"btn-early-close", fn:endSellPhase}]);
     return;
   }
@@ -897,15 +916,18 @@ function propose(price){
     custBubble(`"흠, 너무 비싼데… <em>${fmt(cPrice)}G</em>면 사겠소."`);
     const cb=$("#counter-box");
     cb.classList.add("on");
+    const selAt = S.selIdx;
     cb.innerHTML = `<div style="font-size:13px; margin-bottom:4px">🤝 손님의 역제안</div>
       <div class="cp">${fmt(cPrice)}G <span class="muted" style="font-size:12px; font-weight:600">(내 매입가 ${fmt(inv.cost)}G)</span></div>
       <div class="sell-actions" style="margin-top:10px">
         <button class="btn small" id="btn-accept-counter">✅ 수락하고 판매</button>
-        <button class="btn small ghost" id="btn-insist">🔁 가격 다시 제안</button>
+        <button class="btn small ghost" id="btn-insist">🔁 재제안</button>
+        <button class="btn small ghost" id="btn-decline-counter">😶 보내기</button>
       </div>`;
-    $("#btn-accept-counter").onclick=()=> saleDone(cPrice, 1, `"거래 성사! 좋은 흥정이었소."`);
+    $("#btn-accept-counter").onclick=()=>{ S.selIdx=selAt; saleDone(cPrice, 1, `"거래 성사! 좋은 흥정이었소."`); };
     $("#btn-insist").onclick=()=>{ cb.classList.remove("on"); custBubble(`"…얼마면 되겠나. 마지막 기회요."`); toast("⚠️ 마지막 제안! 너무 비싸면 떠납니다"); };
-  } else if (cu.counterUsed && r <= effT*1.08){
+    $("#btn-decline-counter").onclick=()=>{ SND.click(); custLeaves(0, `"인연이 아니군." ${cu.t.nm}이(가) 아쉬워하며 떠났다.`); };
+  } else if (cu.counterUsed && (r <= effT*1.08 || (cu.counterPrice && price <= cu.counterPrice*1.12))){
     saleDone(price, 0, `"…독하군. 하지만 물건은 좋으니, 사겠소."`);
   } else {
     custLeaves(-2, `"바가지를 씌우다니!" ${cu.t.nm}이(가) 화를 내며 떠났다. (평판 하락)`);
@@ -1086,7 +1108,7 @@ function renderUpgrades(){
     S.gold-=u.costs[lv]; S.up[k]++;
     SND.buy(); bumpGold();
     toast(`🔨 ${u.nm} Lv.${S.up[k]}!`);
-    save(); renderUpgrades(); renderDebt(); renderTop();
+    save(); renderUpgrades(); renderCraft(); renderDebt(); renderTop();
     sticky([{label: nextDayLabel(), id:"btn-next-day", fn:nextDay}]);
   });
 }
@@ -1448,6 +1470,8 @@ function render(){
     if (sv){ if (!confirm("기존 저장이 있습니다. 새로 시작하면 사라집니다. 계속할까요?")) return; }
     wipe(); S=newState(); SND.click(); bgmStart(); startDay();
   };
+  $("#btn-title-dex").onclick=showDex;
+  $("#btn-title-hall").onclick=showHall;
 })();
 </script>
 </body>
