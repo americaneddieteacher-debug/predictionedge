@@ -244,7 +244,7 @@ input[type=range]{width:100%; accent-color:var(--gold); height:32px}
         <button class="btn ghost small" id="btn-title-hall" style="flex:1">🏆 기록</button>
       </div>
     </div>
-    <p class="title-foot">v1.3 · 자동 저장 · 세계 랭킹 지원</p>
+    <p class="title-foot">v1.4 · 자동 저장 · 세계 랭킹 지원</p>
   </div>
 
   <!-- 상단바 -->
@@ -548,7 +548,7 @@ function newState(){
     dayStat:{rev:0,cost:0,sold:0,happy:0,angry:0,repD:0},
     buff:{festival:false, rain:false, boom:false},
     eventDone:false, sound:true, tut:{buy:false,sell:false,report:false,haggle:false},
-    endless:false, total:{rev:0,sold:0}, best:0,
+    endless:false, total:{rev:0,sold:0}, best:0, combo:0,
   };
 }
 function save(){
@@ -607,6 +607,7 @@ function invCap(){ return 8 + S.up.shelf*4; }
 function debtLeft(){ return DEBT_TOTAL - S.paid; }
 function maxTier(){ const lv=repLv(); return lv>=3?3: lv>=1?2:1; }
 function value(item){ return Math.round(item.base * (S.mult[item.cat]||1)); }
+function invValue(inv){ return Math.round(value(IT[inv.id]) * (inv.fine?1.5:1)); }
 
 /* ─── UI 헬퍼 ─── */
 function toast(msg, gold=false){
@@ -683,7 +684,7 @@ function startDay(){
   if (S.buff.festival) n = Math.round(n*1.5);
   if (S.buff.rain) n = Math.round(n*0.65);
   S.custN = clamp(n + RI(-1,1), 4, 18);
-  S.served = 0; S.cur=null;
+  S.served = 0; S.cur=null; S.combo = 0;
   genOffers();
   // 파산 구제: 재고도 돈도 없으면 마왕의 비상금 지급
   if (!S.inv.length && S.gold < Math.min(...S.offers.map(o=>o.cost))){
@@ -703,8 +704,9 @@ function genOffers(){
     // 상위 티어는 낮은 확률로
     const it = wpick(pool, i => i.t===1? 5 : i.t===2? (mt>=2?2.4:0) : (mt>=3?1.1:0));
     const disc = R(0.40,0.62);
-    const cost = Math.max(10, Math.round(it.base*(S.mult[it.cat]||1)*disc*(1-0.08*S.up.goblin)));
-    S.offers.push({id:it.id, cost, disc:Math.round((1-disc)*100), sold:false});
+    const fine = Math.random()<0.10;
+    const cost = Math.max(10, Math.round(it.base*(S.mult[it.cat]||1)*disc*(fine?1.35:1)*(1-0.08*S.up.goblin)));
+    S.offers.push({id:it.id, cost, disc:Math.round((1-disc)*100), sold:false, fine});
   }
 }
 
@@ -718,8 +720,8 @@ function renderBuy(){
     d.className="offer"+(o.sold?" sold-out":"");
     d.innerHTML = `<span class="disc">-${o.disc}%</span>
       <span class="e">${it.e}</span>
-      <div class="nm">${it.nm} <span class="tier-tag t${it.t}">T${it.t}</span></div>
-      <div class="meta">시세 ${fmt(value(it))}G</div>
+      <div class="nm">${o.fine?"✨":""}${it.nm} <span class="tier-tag t${it.t}">T${it.t}</span></div>
+      <div class="meta">시세 ${fmt(Math.round(value(it)*(o.fine?1.5:1)))}G${o.fine?" · 명품":""}</div>
       <button class="buy" data-i="${idx}" ${S.gold<o.cost||S.inv.length>=invCap()||o.sold?"disabled":""}>${o.sold?"품절":fmt(o.cost)+"G 매입"}</button>`;
     g.appendChild(d);
   });
@@ -727,7 +729,7 @@ function renderBuy(){
     const o=S.offers[+b.dataset.i];
     if (o.sold || S.gold<o.cost || S.inv.length>=invCap()) return;
     S.gold-=o.cost; S.dayStat.cost+=o.cost;
-    S.inv.push({id:o.id, cost:o.cost}); o.sold=true;
+    S.inv.push({id:o.id, cost:o.cost, fine:o.fine}); o.sold=true;
     SND.buy(); bumpGold();
     save(); renderBuy(); renderTop();
   });
@@ -758,7 +760,7 @@ function renderInvGrid(root, onSel){
       d.className="slot"; d.dataset.idx=i;
       if (S.cur && !S.cur.gone && S.cur.want!=="any" && it.cat===S.cur.want) d.classList.add("want");
       if (S.selIdx===i) d.classList.add("sel");
-      d.innerHTML=`<span class="e">${it.e}</span><span class="p">${fmt(value(it))}G</span>`;
+      d.innerHTML=`<span class="e">${inv.fine?"✨":""}${it.e}</span><span class="p">${fmt(invValue(inv))}G</span>`;
       if (onSel) d.onclick=()=>onSel(i);
     } else { d.className="slot empty"; d.innerHTML=`<span class="e" style="font-size:14px">·</span>`; }
     root.appendChild(d);
@@ -774,6 +776,12 @@ function startSell(){
 
 function genCust(){
   const lv=repLv();
+  // 대상단 큰손: 재고가 넉넉하면 낮은 확률로 전량 매입 제안
+  if (S.inv.length>=4 && Math.random() < 0.05 + lv*0.01){
+    const offer = Math.round(S.inv.reduce((a,v)=>a+invValue(v),0) * R(1.05,1.35));
+    return { t:{nm:"대상단 큰손", e:"🧞", pat:1}, bulk:true, bulkOffer:offer,
+      tol:1, want:"any", wantT:1, pat:1, greet:"", counterUsed:false, gone:false, vip:true };
+  }
   const c = wpick(CUSTS, t=>t.w[lv]);
   const tol0 = R(c.tol[0], c.tol[1]);
   let want = Math.random()<0.25 ? "any" : pick(c.cats);
@@ -819,7 +827,7 @@ function renderSellFrame(){
   showScr("scr-sell");
   $("#sell-sub").textContent = `오늘 손님 ${S.custN}명`;
   const dots = Array.from({length:S.custN},(_,i)=>`<i class="${i<S.served?"done":""}"></i>`).join("");
-  $("#queue-info").innerHTML = `손님 ${Math.min(S.served+1,S.custN)} / ${S.custN} <span class="qdots">${dots}</span>`;
+  $("#queue-info").innerHTML = `손님 ${Math.min(S.served+1,S.custN)} / ${S.custN} <span class="qdots">${dots}</span>${(S.combo||0)>=2?` <span class="chip" style="color:var(--gold2); border-color:rgba(242,201,109,.4)">🔥 콤보 x${S.combo}</span>`:""}`;
   $("#sell-inv-cap").textContent = `${S.inv.length}/${invCap()}칸`;
   renderTop();
 }
@@ -832,6 +840,7 @@ function heartsHtml(n){ return "❤️".repeat(Math.max(0,n)) + "🖤".repeat(Ma
 function renderSell(){
   renderSellFrame();
   const cu=S.cur;
+  if (cu.bulk){ renderBulk(cu); return; }
   const wantTxt = cu.want==="any" ? "아무거나 좋은 물건" : `${CATS[cu.want].e} ${CATS[cu.want].nm}`;
   $("#cust-area").innerHTML = `
     <div class="cust-card" id="cust-card">
@@ -853,6 +862,41 @@ function renderSell(){
   }}]);
 }
 
+function renderBulk(cu){
+  $("#cust-area").innerHTML = `
+    <div class="cust-card" id="cust-card">
+      <div class="cust-top">
+        <div class="cust-face">🧞</div>
+        <div class="cust-info">
+          <div class="cust-nm">대상단 큰손<span class="vip">VIP</span></div>
+          <div class="cust-tags"><span class="chip">💰 <b>전량 매입 제안</b></span></div>
+        </div>
+      </div>
+      <div class="bubble" id="cust-bubble">"진열대의 물건, <em>전부</em> 내가 사지. ${S.inv.length}개 일괄 <em>${fmt(cu.bulkOffer)}G</em> — 어떤가?"</div>
+    </div>`;
+  renderInvGrid($("#sell-inv"), null);
+  sticky([
+    {label:`💰 전부 판다 (+${fmt(cu.bulkOffer)}G)`, id:"btn-bulk-sell", fn:()=>{
+      cu.gone=true;
+      const n=S.inv.length;
+      S.inv.forEach(v=>dexAdd(v.id, 0));
+      S.gold+=cu.bulkOffer; S.dayStat.rev+=cu.bulkOffer; S.dayStat.sold+=n;
+      S.total.rev+=cu.bulkOffer; S.total.sold+=n;
+      if (cu.bulkOffer > M.rec.bestSale){ M.rec.bestSale = cu.bulkOffer; saveMeta(); }
+      S.inv=[];
+      const repGain=Math.round((4+n)*(1+0.5*S.up.deco));
+      S.rep+=repGain; S.dayStat.repD+=repGain;
+      SND.bigcoin(); bumpGold(); toast(`🧞 전량 판매! +${fmt(cu.bulkOffer)}G · 평판 +${repGain}`, true);
+      unlockAch("vip","VIP 손님에게 판매");
+      S.served++; save(); renderTop(); sticky([]);
+      setTimeout(nextCustomer, 1100);
+    }},
+    {label:"거절", ghost:true, id:"btn-bulk-decline", fn:()=>{
+      SND.click(); custLeaves(0, `"아쉽군. 다음에 또 보지." 큰손이 떠났다.`);
+    }},
+  ]);
+}
+
 function selectItem(i){
   if (!S.cur || S.cur.gone) return;
   S.selIdx=i; SND.click();
@@ -860,8 +904,8 @@ function selectItem(i){
   renderInvGrid($("#sell-inv"), selectItem);
   const pp=$("#price-panel"); pp.classList.add("on");
   $("#counter-box").classList.remove("on");
-  $("#pp-e").textContent=it.e; $("#pp-nm").textContent=it.nm;
-  $("#pp-base").textContent=fmt(value(it)); $("#pp-cost").textContent=fmt(inv.cost);
+  $("#pp-e").textContent=it.e; $("#pp-nm").textContent=(inv.fine?"✨ ":"")+it.nm;
+  $("#pp-base").textContent=fmt(invValue(inv)); $("#pp-cost").textContent=fmt(inv.cost);
   const range=$("#price-range");
   range.oninput=updatePrice;
   updatePrice();
@@ -871,8 +915,8 @@ function selectItem(i){
 }
 function updatePrice(){
   const inv=S.inv[S.selIdx]; if (!inv) return;
-  const it=IT[inv.id], pct=+$("#price-range").value;
-  const price=Math.max(1, Math.round(value(it)*pct/100));
+  const pct=+$("#price-range").value;
+  const price=Math.max(1, Math.round(invValue(inv)*pct/100));
   $("#pp-price").textContent = fmt(price)+"G";
   $("#pp-pct").textContent = `시세의 ${pct}%`;
   $$(".pp-presets button").forEach(b=> b.classList.toggle("on", +b.dataset.pct===pct));
@@ -881,14 +925,14 @@ $$(".pp-presets button").forEach(b=> b.onclick=()=>{ $("#price-range").value=b.d
 
 $("#btn-propose").onclick = ()=>{
   if (S.selIdx==null || !S.cur || S.cur.gone) return;
-  const inv=S.inv[S.selIdx], it=IT[inv.id];
-  const price=Math.max(1, Math.round(value(it) * (+$("#price-range").value)/100));
+  const inv=S.inv[S.selIdx];
+  const price=Math.max(1, Math.round(invValue(inv) * (+$("#price-range").value)/100));
   propose(price);
 };
 
 function propose(price){
   const cu=S.cur, inv=S.inv[S.selIdx], it=IT[inv.id];
-  const V=value(it), r=price/V, eff=tolEff(cu,it);
+  const V=invValue(inv), r=price/V, eff=tolEff(cu,it);
   // 카테고리 불일치
   if (cu.want!=="any" && it.cat!==cu.want){
     cu.pat--;
@@ -945,11 +989,14 @@ function saleDone(price, happy, line){
   const repGain = Math.round(((happy===2?3: happy===1?2:1) + (cu.vip?2:0)) * (1+0.5*S.up.deco));
   S.rep+=repGain; S.dayStat.repD+=repGain;
   S.best = Math.max(S.best, price);
+  S.combo = (S.combo||0)+1;
+  let tip = 0;
+  if (S.combo>=2){ tip = Math.round(price*0.04*Math.min(S.combo-1,5)); S.gold+=tip; S.dayStat.rev+=tip; S.total.rev+=tip; }
   dexAdd(it.id, price);
   bumpGold(); (price>=800?SND.bigcoin:SND.coin)();
   const card=$("#cust-card");
   if (card){ const rc=card.getBoundingClientRect(); coinFx(rc.left+rc.width/2, rc.top+rc.height/2, price>=800?6:3); }
-  custBubble(`${line} <br><span class="muted" style="font-size:12px">+${fmt(price)}G · 평판 +${repGain}</span>`);
+  custBubble(`${line} <br><span class="muted" style="font-size:12px">+${fmt(price)}G${tip?` · 🔥콤보 팁 +${fmt(tip)}G`:""} · 평판 +${repGain}</span>`);
   $("#price-panel").classList.remove("on");
   $("#counter-box").classList.remove("on");
   if (S.total.sold===1) unlockAch("first","첫 판매 달성!");
@@ -965,7 +1012,7 @@ function saleDone(price, happy, line){
 function custLeaves(repD, line){
   const cu=S.cur; if (!cu || cu.gone) return;
   cu.gone=true;
-  if (repD<0){ S.rep=Math.max(0,S.rep+repD*1); S.dayStat.repD+=repD; if (repD<=-2){ S.dayStat.angry++; } }
+  if (repD<0){ S.rep=Math.max(0,S.rep+repD*1); S.dayStat.repD+=repD; if (repD<=-2){ S.dayStat.angry++; S.combo=0; } }
   custBubble(`<span class="muted">${line}</span>`);
   $("#price-panel").classList.remove("on");
   $("#counter-box").classList.remove("on");
