@@ -300,7 +300,7 @@ input{font-family:inherit}
       <button id="btnContinue" class="btn block" style="display:none">📜 이어서 하기</button>
     </div>
     <p class="title-meta" id="title-meta"></p>
-    <p class="title-foot">v2.3 · 자동 저장 · 회차·유산 시스템 · 모바일 지원</p>
+    <p class="title-foot">v3.0 · 자동 저장 · 회차·유산 시스템 · 모바일 지원</p>
   </section>
 
   <!-- ======== 본진(허브) ======== -->
@@ -491,6 +491,7 @@ const CLASSES = {
 };
 const CLASS_KEYS = Object.keys(CLASSES);
 
+const BACKSTORIES = ['몰락한 기사 가문의 서자','전쟁으로 모든 것을 잃은 고아','왕국군 탈영병','북부 출신 떠돌이 사냥꾼','빚에 쫓겨 검을 든 농부','복수를 맹세한 상인의 아들','이름을 버린 전직 귀족 호위','수도원에서 도망친 견습 수사','몰락한 검투장의 챔피언','저주받은 마을의 마지막 생존자'];
 const NAMES = ['카일','로엔','미르','세라핀','한스','일리아','바크','테오','류센','아린','거트','올가','핀','브란','엘딘','로자','무영','단테','하르켄','이졸데','가렌','유나','발터','키라','오스틴','레나','드레이크','시엔','볼프','마리'];
 
 const TRAITS = [
@@ -548,6 +549,15 @@ const ENEMIES = {
   cultist:    { name:'암흑 사제',    icon:'🧙', hp:40,  atk:12, def:1, spd:6,  gold:60,  exp:50, ranged:true, caster:true },
   dreadLord:  { name:'군단주 카르가스', icon:'👿', hp:230, atk:18, def:6, spd:7, gold:450, exp:340, boss:true },
 };
+
+const REGIONS = [
+  { id:'ashford',   icon:'🏘️', name:'재의 여울', minRep:0,  tiers:[1,2], desc:'안전한 변경 마을. 쉬운 의뢰뿐이지만 부담도 적다.' },
+  { id:'kingsroad', icon:'🛤️', name:'왕의 가도', minRep:10, tiers:[2,3], desc:'물자가 오가는 길목 — 물약·식량 10% 할인.', shopMul:0.9 },
+  { id:'border',    icon:'🏰', name:'국경 지대', minRep:25, tiers:[3,4], desc:'전선의 최전방 — 의뢰 명성 +2.', repBonus:2 },
+  { id:'ruins',     icon:'🌫️', name:'북부 폐허', minRep:50, tiers:[4,4], desc:'검은 군단의 그림자 — 의뢰 보수 +10%.', goldMul:1.1 },
+];
+function curRegion(){ return REGIONS.find(r=>r.id===(S&&S.region||'ashford')) || REGIONS[0]; }
+function shopPrice(p){ return Math.round(p*(curRegion().shopMul||1)); }
 
 const CONTRACT_MODS = [
   { id:'urgent', icon:'⚡', name:'긴급',     desc:'보수 +40% · 적 공격 +2',        goldMul:1.4, eAtk:2 },
@@ -733,7 +743,7 @@ function newState(name, challenges){
     roster:[], candidates:[], contracts:[], chron:[], relics:[], challenges:challenges||[],
     stats:{ battles:0, wins:0, kills:0, goldEarned:0, fallen:0 },
     storySeen:[], finalUnlocked:false, won:false, freePlay:false,
-    lastAidDay:-99, nextRewardBonus:false, raidWave:0,
+    lastAidDay:-99, nextRewardBonus:false, raidWave:0, region:'ashford',
   };
 }
 function hasChal(id){ return S && S.challenges.includes(id); }
@@ -755,6 +765,7 @@ function relicMods(){
 /* ---------- 용병 ---------- */
 function makeMerc(cls, lvl=1){
   const m = { id:mercSeq++, name:pick(NAMES), cls, lvl, exp:0, row:CLASSES[cls].row,
+    bg:pick(BACKSTORIES), sorties:0, storyDone:false, bonusHp:0,
     trait:rnd(4)===0?null:pick(TRAITS), weapon:null, armor:null, injury:0, hp:0 };
   if(S){ let guard=0; while(S.roster.concat(S.candidates).some(x=>x!==m&&x.name===m.name)&&guard++<40) m.name=pick(NAMES); }
   m.hp = mercStats(m).hp;
@@ -762,7 +773,7 @@ function makeMerc(cls, lvl=1){
 }
 function mercStats(m){
   const c = CLASSES[m.cls], g = c.growth, L = m.lvl-1, t = m.trait||{}, R = relicMods();
-  let hp  = Math.round((c.hp + g.hp*L) * (t.hpMul||1));
+  let hp  = Math.round((c.hp + g.hp*L) * (t.hpMul||1)) + (m.bonusHp||0);
   let atk = Math.round((c.atk + g.atk*L) * (t.atkMul||1) * (1+R.atkMul)) + (m.weapon?m.weapon.atk:0);
   let def = Math.round(c.def + g.def*L) + (t.def||0) + (m.armor?m.armor.def:0) + R.def;
   let spd = Math.round(c.spd + g.spd*L) + (t.spd||0) + R.spd;
@@ -791,7 +802,9 @@ function hireCost(m){ return 50 + (m.lvl-1)*45 + 10*rnd(4); }
 /* ---------- 의뢰 ---------- */
 let contractSeq = 1;
 function genContracts(){
-  const avail = CONTRACT_TIERS.filter(t=>S.rep>=t.minRep);
+  const reg = curRegion();
+  let avail = CONTRACT_TIERS.filter(t=>S.rep>=t.minRep && t.tier>=reg.tiers[0] && t.tier<=reg.tiers[1]);
+  if(!avail.length) avail = [CONTRACT_TIERS.find(t=>t.tier===reg.tiers[0])];
   const list = [];
   const topTier = avail[avail.length-1];
   const count = 3 + rnd(2);
@@ -804,7 +817,8 @@ function genContracts(){
     const exp = enemies.reduce((a,k)=>a+ENEMIES[k].exp,0);
     let reward = Math.round((30 + sum*2 * (0.9+Math.random()*0.3))/5)*5;
     if(hasChal('austere')) reward = Math.round(reward*0.7);
-    let repGain = t.tier*3 + rnd(3), expGain = exp, mod = null;
+    if(reg.goldMul) reward = Math.round(reward*reg.goldMul/5)*5;
+    let repGain = t.tier*3 + rnd(3) + (reg.repBonus||0), expGain = exp, mod = null;
     if(Math.random()<0.25){
       mod = pick(CONTRACT_MODS);
       if(mod.goldMul) reward = Math.round(reward*mod.goldMul/5)*5;
@@ -877,6 +891,12 @@ function load(){
     }
     if(s.v!==2) return null;
     if(s.raidWave==null) s.raidWave=0;
+    if(!s.region) s.region='ashford';
+    s.roster.concat(s.candidates||[]).forEach(m=>{
+      if(!m.bg) m.bg=pick(BACKSTORIES);
+      if(m.sorties==null) m.sorties=0;
+      if(m.bonusHp==null) m.bonusHp=0;
+    });
     mercSeq = Math.max(1,...s.roster.concat(s.candidates||[]).map(m=>m.id+1), 1);
     contractSeq = Math.max(1,...(s.contracts||[]).filter(c=>c.id!=='FINAL').map(c=>c.id+1), 1);
     return s;
@@ -975,8 +995,9 @@ function viewRoster(){
         <div class="merc-face">${c.icon}</div>
         <div>
           <h3>${m.name} <span class="lvl-badge">Lv.${m.lvl}</span> <span class="row-badge ${m.row}">${m.row==='front'?'전열':'후열'}</span></h3>
-          <div class="merc-cls">${c.name} · 급여 ${mercWage(m)}🪙/일</div>
+          <div class="merc-cls">${c.name} · 급여 ${mercWage(m)}🪙/일 · 참전 ${m.sorties||0}회</div>
           ${m.trait?`<div class="trait">✦ ${m.trait.name} — ${m.trait.desc}</div>`:'<div class="trait muted">✦ 특성 없음</div>'}
+          <div class="muted" style="font-size:11px;font-style:italic">${m.bg||''}${m.storyDone?' · 이야기를 들었다 🔥':''}</div>
         </div>
       </div>
       ${hpBar(m.hp, st.hp)}
@@ -1003,6 +1024,13 @@ function viewContracts(){
   const dcap = hasChal('few') ? 3 : 4;
   return `
   <div class="section-title"><h2>의뢰판</h2><span class="muted">출전 가능 ${able}명 (최대 ${dcap}명) · 의뢰 수행 시 하루가 지난다</span></div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin:0 0 8px">
+    ${REGIONS.map(r=>{
+      const locked = S.rep < r.minRep, cur = r.id === (S.region||'ashford');
+      return `<button class="btn sm ${cur?'gold':''}" ${(locked||cur)?'disabled':''} onclick="G.travel('${r.id}')" title="${r.desc}">${r.icon} ${r.name}${locked?` 🔒명성${r.minRep}`:''}</button>`;
+    }).join('')}
+  </div>
+  <p class="muted" style="font-size:12.5px;margin:0 0 10px">📍 <b>${curRegion().name}</b> — ${curRegion().desc} (이동에는 하루가 걸린다)</p>
   <p style="font-size:13px;font-weight:700;color:var(--gold-soft);margin:0 0 12px">${
     S.won ? '👑 검은 군단을 무찔렀다 — 자유 용병 생활 중'
     : S.finalUnlocked ? '⚑ 최종 의뢰 「검은 군단 본진 섬멸」에 도전할 수 있다!'
@@ -1071,12 +1099,12 @@ function viewMarket(){
     <div class="card panel">
       <h3>🧪 치유 물약</h3>
       <div class="muted" style="font-size:12.5px;margin:4px 0 8px">전투 중 체력 ${25+R.potion} 회복 · 보유 ${S.potions}개</div>
-      <button class="btn sm gold" ${S.gold>=30?'':'disabled'} onclick="G.buyPotion()">🪙 30 구입</button>
+      <button class="btn sm gold" ${S.gold>=shopPrice(30)?'':'disabled'} onclick="G.buyPotion()">🪙 ${shopPrice(30)} 구입</button>
     </div>
     <div class="card panel">
       <h3>🍞 식량 꾸러미</h3>
       <div class="muted" style="font-size:12.5px;margin:4px 0 8px">식량 10 · 보유 ${S.food} · 매일 인원수만큼 소모</div>
-      <button class="btn sm gold" ${S.gold>=25?'':'disabled'} onclick="G.buyFood()">🪙 25 구입</button>
+      <button class="btn sm gold" ${S.gold>=shopPrice(25)?'':'disabled'} onclick="G.buyFood()">🪙 ${shopPrice(25)} 구입</button>
     </div>
   </div>`;
 }
@@ -1187,12 +1215,34 @@ const G = {
     closeModal(); renderHub(); toast(`${m.name} 해고`);
   },
   buyPotion(){
-    if(S.gold<30) return toast('골드가 부족하다', true);
-    S.gold-=30; S.potions++; SFX.coin(); renderHub(); toast('치유 물약 구입 (+1🧪)');
+    const c = shopPrice(30);
+    if(S.gold<c) return toast('골드가 부족하다', true);
+    S.gold-=c; S.potions++; SFX.coin(); renderHub(); toast('치유 물약 구입 (+1🧪)');
   },
   buyFood(){
-    if(S.gold<25) return toast('골드가 부족하다', true);
-    S.gold-=25; S.food+=10; SFX.coin(); renderHub(); toast('식량 구입 (+10🍞)');
+    const c = shopPrice(25);
+    if(S.gold<c) return toast('골드가 부족하다', true);
+    S.gold-=c; S.food+=10; SFX.coin(); renderHub(); toast('식량 구입 (+10🍞)');
+  },
+  travel(id){
+    const r = REGIONS.find(x=>x.id===id); if(!r || S.rep<r.minRep || S.region===id) return;
+    openModal(`
+      <h3>${r.icon} ${r.name}(으)로 이동</h3>
+      <p class="modal-sub">${r.desc}</p>
+      <p style="font-size:13px">이동에는 <b>하루</b>가 걸린다 (급여·식량 소모). 도착하면 그 지역의 의뢰판이 열린다.</p>
+      <div class="modal-actions">
+        <button class="btn" onclick="G.closeModal()">취소</button>
+        <button class="btn gold" onclick="G.travelDo('${id}')">출발한다</button>
+      </div>`);
+  },
+  travelDo(id){
+    const r = REGIONS.find(x=>x.id===id); if(!r) return;
+    closeModal();
+    S.region = id;
+    chron(`부대가 ${r.name}(으)로 이동했다.`);
+    advanceDay();
+    switchTab('contracts');
+    toast(`${r.icon} ${r.name} 도착`);
   },
   buyEquip(kind, itemId){
     const it = (kind==='w'?WEAPONS:ARMORS).find(x=>x.id===itemId); if(!it) return;
@@ -1731,6 +1781,7 @@ function endBattle(victory, retreat){
   const injuredNames = [], deadNames = [];
   partyUnits.forEach(u=>{
     const m = u.ref;
+    m.sorties = (m.sorties||0)+1;
     m.hp = u.alive ? u.hp : 0;
     if(!u.alive){
       S.stats.fallen++;
@@ -1884,10 +1935,39 @@ function advanceDay(){
     chron('재의 여울 촌장이 지원금 120골드를 보내왔다. "다시 일어서게, 대장."');
     toast('촌장의 지원금 +120🪙');
   }
-  if(Math.random()<0.32) showEvent(pick(EVENTS));
+  // 용병 개인 이야기 (참전 5회 이상, 1인 1회)
+  const storyCand = S.roster.filter(m=>(m.sorties||0)>=5 && !m.storyDone);
+  if(storyCand.length && Math.random()<0.3){
+    showPersonalStory(pick(storyCand));
+  } else if(Math.random()<0.32) showEvent(pick(EVENTS));
   checkAchs();
   save();
 }
+function showPersonalStory(m){
+  m.storyDone = true;
+  window.__storyMerc = m;
+  openModal(`
+    <h3>🔥 ${m.name}의 이야기</h3>
+    <p style="font-family:var(--serif);line-height:1.85;color:var(--ink-dim)">모닥불이 낮게 타는 밤. <b>${m.bg}</b>인 ${m.name}이(가) 조용히 입을 연다.<br><br>"…그래서 여기까지 온 겁니다, 대장. 이 깃발 아래가 제 마지막 자리였으면 합니다."</p>
+    <div class="pick-list">
+      <button class="pick-item" onclick="G.storyChoice(0)"><span class="pi-face">🤝</span><span><b>어깨를 두드린다</b><br><span class="pi-meta">"잘 왔다." — 경험치 +40</span></span></button>
+      <button class="pick-item" onclick="G.storyChoice(1)"><span class="pi-face">⚔️</span><span><b>"과거는 검으로 증명해라"</b><br><span class="pi-meta">각오가 굳는다 — ${m.trait?'최대 체력 +6':'새로운 특성을 얻는다'}</span></span></button>
+    </div>`, true);
+}
+G.storyChoice = function(i){
+  const m = window.__storyMerc; if(!m) return;
+  closeModal();
+  if(i===0){
+    gainExp(m, 40);
+    chron(`${m.name}의 과거를 들었다. ${m.bg} — 이제는 우리 단원이다. (EXP +40)`);
+    toast(`${m.name} — 신뢰가 깊어졌다 (+40 EXP)`);
+  } else {
+    if(!m.trait){ m.trait = pick(TRAITS); chron(`${m.name}이(가) 각오를 다졌다 — 특성 「${m.trait.name}」 각성!`); toast(`${m.name} — 특성 「${m.trait.name}」 각성!`); }
+    else { m.bonusHp = (m.bonusHp||0)+6; m.hp += 6; chron(`${m.name}의 각오가 몸을 단련시켰다. (최대 체력 +6)`); toast(`${m.name} — 최대 체력 +6`); }
+  }
+  SFX.levelup();
+  renderHub();
+};
 function showEvent(ev){
   if(ev.auto){
     const msg = ev.choices[0].fx(S);
