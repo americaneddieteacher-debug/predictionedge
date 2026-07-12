@@ -215,6 +215,13 @@ input[type=range]{width:100%; accent-color:var(--gold); height:32px}
 /* 엔딩 선택 */
 .end-choice{display:flex; flex-direction:column; gap:10px; width:min(300px,100%); margin-bottom:8px}
 
+/* 마왕 스킬 */
+.skill-bar{display:flex; gap:6px; margin-top:10px}
+.skill-btn{flex:1; background:rgba(167,139,250,.12); border:1px solid rgba(167,139,250,.35); border-radius:11px;
+  padding:7px 4px; font-size:12px; font-weight:800; color:#d8ccf7; display:flex; flex-direction:column; gap:1px; align-items:center}
+.skill-btn:disabled{opacity:.35}
+.skill-btn .st{font-size:9px; font-weight:600; color:var(--muted)}
+
 /* 랭킹 */
 .lb-input{width:100%; background:var(--card2); border:1px solid var(--line); border-radius:12px; padding:12px 14px;
   color:var(--ink); font:inherit; margin:0 0 8px; text-align:center; outline:none}
@@ -244,7 +251,7 @@ input[type=range]{width:100%; accent-color:var(--gold); height:32px}
         <button class="btn ghost small" id="btn-title-hall" style="flex:1">🏆 기록</button>
       </div>
     </div>
-    <p class="title-foot">v1.4 · 자동 저장 · 세계 랭킹 지원</p>
+    <p class="title-foot">v1.5 · 자동 저장 · 세계 랭킹 지원</p>
   </div>
 
   <!-- 상단바 -->
@@ -407,6 +414,18 @@ const ITEMS = [
   {id:"r2", nm:"저주받은 인형", e:"🪆", cat:"rel", t:2, base:320},
   {id:"r3", nm:"봉인된 마검",   e:"🗡", cat:"rel", t:3, base:1800},
   {id:"r4", nm:"마족의 왕관",   e:"👑", cat:"rel", t:3, base:2100},
+  {id:"p5", nm:"해독 물약",     e:"🧫", cat:"pot", t:1, base:80},
+  {id:"p6", nm:"거인의 물약",   e:"🧉", cat:"pot", t:2, base:280},
+  {id:"w5", nm:"사냥용 활",     e:"🏹", cat:"wep", t:1, base:130},
+  {id:"w6", nm:"화염 도끼",     e:"🪓", cat:"wep", t:2, base:520},
+  {id:"a5", nm:"여행자 망토",   e:"🧥", cat:"arm", t:1, base:100},
+  {id:"a6", nm:"수호자 투구",   e:"🪖", cat:"arm", t:2, base:450},
+  {id:"m5", nm:"바람 주문서",   e:"🌪️", cat:"mag", t:1, base:125},
+  {id:"m6", nm:"소환의 룬",     e:"🔯", cat:"mag", t:2, base:470},
+  {id:"c5", nm:"곰 발톱 목걸이", e:"🐾", cat:"acc", t:1, base:120},
+  {id:"c6", nm:"달빛 귀걸이",   e:"🌙", cat:"acc", t:2, base:420},
+  {id:"r5", nm:"고대 주화 꾸러미", e:"💰", cat:"rel", t:1, base:110},
+  {id:"r6", nm:"용의 눈물",     e:"💧", cat:"rel", t:2, base:360},
 ];
 const IT = Object.fromEntries(ITEMS.map(i=>[i.id,i]));
 
@@ -432,6 +451,10 @@ const CUSTS = [
    greet:["호위 몰래 나왔어요. 예쁜 것 보여주세요!","성 안 물건들은 죄다 지루해서요."]},
   {id:"dragon",   nm:"고룡",        e:"🐉", tol:[2.00,2.80], pat:1, cats:["rel","acc"],          maxT:3, w:[0,0,0,1,3], vip:true,
    greet:["인간의 화폐로 보물을 사는 것도 색다르군.","내 둥지에 어울릴 물건을 내놓아라."]},
+  {id:"alch",     nm:"연금술사",    e:"⚗️", tol:[1.30,1.75], pat:3, cats:["pot","mag"],          maxT:3, w:[0,2,3,3,3],
+   greet:["재료의 순도가 중요하네. 어디 보자…","금을 만드는 건 결국 좋은 재료지."]},
+  {id:"merc",     nm:"용병대장",    e:"🪓", tol:[1.20,1.60], pat:2, cats:["wep","arm"],          maxT:3, w:[0,1,3,4,3],
+   greet:["부대 전체 장비를 봐 두는 중이다.","싸구려는 부하들 목숨값이야. 좋은 걸로."]},
 ];
 
 const REP_LV = [
@@ -455,6 +478,7 @@ const UPG = {
 const ACH = {
   first:"첫 판매", soldout:"완판", rev3000:"하루 매출 3,000G", vip:"VIP 판매",
   debtfree:"빚 완납", craft:"첫 합성", ending_peace:"평화 엔딩", ending_conquer:"정복 엔딩",
+  combo5:"콤보 마스터 (x5)", bulk:"큰손과의 거래", skill:"마왕의 힘 각성",
 };
 
 const DEBT_TOTAL = 30000;
@@ -549,6 +573,7 @@ function newState(){
     buff:{festival:false, rain:false, boom:false},
     eventDone:false, sound:true, tut:{buy:false,sell:false,report:false,haggle:false},
     endless:false, total:{rev:0,sold:0}, best:0, combo:0,
+    skills:{awe:false, eye:false, time:false},
   };
 }
 function save(){
@@ -685,6 +710,7 @@ function startDay(){
   if (S.buff.rain) n = Math.round(n*0.65);
   S.custN = clamp(n + RI(-1,1), 4, 18);
   S.served = 0; S.cur=null; S.combo = 0;
+  S.skills = {awe:false, eye:false, time:false};
   genOffers();
   // 파산 구제: 재고도 돈도 없으면 마왕의 비상금 지급
   if (!S.inv.length && S.gold < Math.min(...S.offers.map(o=>o.cost))){
@@ -799,6 +825,7 @@ function genCust(){
 }
 function tolEff(cu, item){
   let t = cu.tol * (1 + 0.07*S.up.book);
+  if (cu.awed) t *= 1.25;
   const cat = item? item.cat : cu.want;
   if (cat===S.hot)  t *= S.buff.boom? 1.55 : 1.32;
   if (cat===S.cold) t *= 0.86;
@@ -857,6 +884,7 @@ function renderSell(){
       <div class="bubble" id="cust-bubble">"${cu.greet}" <br><span class="muted" style="font-size:12.5px">— <em>${wantTxt}</em>${cu.want!=="any"?"을(를) 찾고 있다":""}</span></div>
     </div>`;
   renderInvGrid($("#sell-inv"), selectItem);
+  renderSkillBar();
   sticky([{label:"손님 보내기 😶", ghost:true, id:"btn-skip", fn:()=>{
     SND.click(); custLeaves(0, `"${cu.t.nm}이(가) 조용히 가게를 나섰다."`);
   }}]);
@@ -887,7 +915,7 @@ function renderBulk(cu){
       const repGain=Math.round((4+n)*(1+0.5*S.up.deco));
       S.rep+=repGain; S.dayStat.repD+=repGain;
       SND.bigcoin(); bumpGold(); toast(`🧞 전량 판매! +${fmt(cu.bulkOffer)}G · 평판 +${repGain}`, true);
-      unlockAch("vip","VIP 손님에게 판매");
+      unlockAch("vip","VIP 손님에게 판매"); unlockAch("bulk");
       S.served++; save(); renderTop(); sticky([]);
       setTimeout(nextCustomer, 1100);
     }},
@@ -895,6 +923,32 @@ function renderBulk(cu){
       SND.click(); custLeaves(0, `"아쉽군. 다음에 또 보지." 큰손이 떠났다.`);
     }},
   ]);
+}
+
+/* ─── 마왕 스킬 (하루 1회씩) ─── */
+const SKILLS = [
+  {k:"awe",  e:"😈", nm:"위압",     need:0, tip:"지갑 +25%"},
+  {k:"eye",  e:"🔮", nm:"심안",     need:1, tip:"한계 표시"},
+  {k:"time", e:"⏳", nm:"시간왜곡", need:2, tip:"손님 +3"},
+];
+function renderSkillBar(){
+  const cu=S.cur; if (!cu || cu.gone || cu.bulk) return;
+  const lv=repLv();
+  let bar=$("#skill-bar");
+  if (!bar){ bar=document.createElement("div"); bar.id="skill-bar"; bar.className="skill-bar"; $("#cust-area").appendChild(bar); }
+  bar.innerHTML = SKILLS.map(d=>{
+    const locked=lv<d.need, used=!!S.skills[d.k];
+    return `<button class="skill-btn" data-k="${d.k}" ${locked||used?"disabled":""}>${d.e} ${d.nm}<span class="st">${locked?`평판 Lv${d.need} 해금`:used?"오늘 사용됨":d.tip}</span></button>`;
+  }).join("");
+  $$("#skill-bar .skill-btn").forEach(b=> b.onclick=()=>useSkill(b.dataset.k));
+}
+function useSkill(k){
+  const cu=S.cur; if (!cu || cu.gone || S.skills[k]) return;
+  S.skills[k]=true; unlockAch("skill"); SND.event();
+  if (k==="awe"){ cu.awed=true; custBubble(`😈 <em>마왕의 위압!</em> 손님이 움찔하며 지갑을 고쳐 잡는다…`); if (S.selIdx!=null) updatePrice(); }
+  if (k==="eye"){ cu.revealed=true; toast("🔮 심안 — 손님의 지갑 한계가 보인다"); if (S.selIdx!=null) updatePrice(); }
+  if (k==="time"){ S.custN=Math.min(S.custN+3, 25); toast("⏳ 시간 왜곡 — 오늘 손님 +3명"); renderSellFrame(); }
+  save(); renderSkillBar();
 }
 
 function selectItem(i){
@@ -919,6 +973,11 @@ function updatePrice(){
   const price=Math.max(1, Math.round(invValue(inv)*pct/100));
   $("#pp-price").textContent = fmt(price)+"G";
   $("#pp-pct").textContent = `시세의 ${pct}%`;
+  if (S.cur && S.cur.revealed && !S.cur.gone){
+    const it2=IT[inv.id];
+    const lim=Math.floor(invValue(inv)*tolEff(S.cur,it2)*(it2.t<S.cur.wantT?0.85:1));
+    $("#pp-pct").textContent += ` · 🔮 한계 ~${fmt(lim)}G`;
+  }
   $$(".pp-presets button").forEach(b=> b.classList.toggle("on", +b.dataset.pct===pct));
 }
 $$(".pp-presets button").forEach(b=> b.onclick=()=>{ $("#price-range").value=b.dataset.pct; SND.click(); updatePrice(); });
@@ -992,6 +1051,7 @@ function saleDone(price, happy, line){
   S.combo = (S.combo||0)+1;
   let tip = 0;
   if (S.combo>=2){ tip = Math.round(price*0.04*Math.min(S.combo-1,5)); S.gold+=tip; S.dayStat.rev+=tip; S.total.rev+=tip; }
+  if (S.combo>=5) unlockAch("combo5");
   dexAdd(it.id, price);
   bumpGold(); (price>=800?SND.bigcoin:SND.coin)();
   const card=$("#cust-card");
@@ -1507,6 +1567,7 @@ function render(){
       S=sv;
       // 구버전 저장 마이그레이션
       S.up.forge = S.up.forge||0;
+      S.skills = S.skills||{awe:false, eye:false, time:false};
       if (S.bgm===undefined) S.bgm=true;
       if (Array.isArray(S.ach)){ S.ach.forEach(a=>{ if(!M.ach.includes(a)) M.ach.push(a); }); saveMeta(); }
       SND.click(); bgmStart();
