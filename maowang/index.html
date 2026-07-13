@@ -251,7 +251,7 @@ input[type=range]{width:100%; accent-color:var(--gold); height:32px}
         <button class="btn ghost small" id="btn-title-hall" style="flex:1">🏆 기록</button>
       </div>
     </div>
-    <p class="title-foot">v1.5 · 자동 저장 · 세계 랭킹 지원</p>
+    <p class="title-foot">v1.6 · 자동 저장 · 세계 랭킹 지원</p>
   </div>
 
   <!-- 상단바 -->
@@ -280,7 +280,7 @@ input[type=range]{width:100%; accent-color:var(--gold); height:32px}
     </div>
     <div class="offer-grid" id="offer-grid"></div>
     <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px">
-      <span class="chip">🎒 재고 <b id="buy-inv-n"></b></span>
+      <span class="chip">🎒 재고 <b id="buy-inv-n"></b></span><span id="buy-quest"></span>
       <button class="btn small ghost" id="btn-refresh">🔄 새 목록 보기 <span class="gold">100G</span></button>
     </div>
     <div class="inv-head"><span>내 재고</span><span id="buy-inv-cap"></span></div>
@@ -350,6 +350,7 @@ input[type=range]{width:100%; accent-color:var(--gold); height:32px}
     <div class="end-choice" id="ending-choice">
       <button class="btn" id="btn-end-peace">🤝 용사를 스카웃한다 (평화의 길)</button>
       <button class="btn ghost" id="btn-end-conquer">😈 자본으로 재정복한다 (정복의 길)</button>
+      <button class="btn ghost" id="btn-end-tycoon" style="display:none">🏦 마계 은행을 세운다 (재벌의 길)</button>
     </div>
     <div class="stats" id="ending-stats" style="display:none"></div>
     <div id="lb-box" style="display:none; width:min(300px,100%); margin-bottom:18px">
@@ -479,6 +480,7 @@ const ACH = {
   first:"첫 판매", soldout:"완판", rev3000:"하루 매출 3,000G", vip:"VIP 판매",
   debtfree:"빚 완납", craft:"첫 합성", ending_peace:"평화 엔딩", ending_conquer:"정복 엔딩",
   combo5:"콤보 마스터 (x5)", bulk:"큰손과의 거래", skill:"마왕의 힘 각성",
+  quest:"의뢰 완수", ending_tycoon:"재벌 엔딩",
 };
 
 const DEBT_TOTAL = 30000;
@@ -573,7 +575,7 @@ function newState(){
     buff:{festival:false, rain:false, boom:false},
     eventDone:false, sound:true, tut:{buy:false,sell:false,report:false,haggle:false},
     endless:false, total:{rev:0,sold:0}, best:0, combo:0,
-    skills:{awe:false, eye:false, time:false},
+    skills:{awe:false, eye:false, time:false}, quest:null,
   };
 }
 function save(){
@@ -633,6 +635,19 @@ function debtLeft(){ return DEBT_TOTAL - S.paid; }
 function maxTier(){ const lv=repLv(); return lv>=3?3: lv>=1?2:1; }
 function value(item){ return Math.round(item.base * (S.mult[item.cat]||1)); }
 function invValue(inv){ return Math.round(value(IT[inv.id]) * (inv.fine?1.5:1)); }
+function questChip(){
+  const q=S.quest; if (!q) return "";
+  return ` <span class="chip" style="${q.claimed?"color:var(--green); border-color:rgba(87,217,143,.4)":""}">📜 ${CATS[q.cat].nm} ${Math.min(q.done,q.n)}/${q.n}${q.claimed?" ✅":` → +${fmt(q.reward)}G`}</span>`;
+}
+function questProgress(cat){
+  const q=S.quest; if (!q || q.claimed || cat!==q.cat) return;
+  q.done++;
+  if (q.done>=q.n){
+    q.claimed=true; S.gold+=q.reward; S.dayStat.rev+=q.reward; S.total.rev+=q.reward;
+    SND.bigcoin(); toast(`📜 오늘의 주문 완수! 보너스 +${fmt(q.reward)}G`, true);
+    unlockAch("quest"); renderTop();
+  }
+}
 
 /* ─── UI 헬퍼 ─── */
 function toast(msg, gold=false){
@@ -711,6 +726,12 @@ function startDay(){
   S.custN = clamp(n + RI(-1,1), 4, 18);
   S.served = 0; S.cur=null; S.combo = 0;
   S.skills = {awe:false, eye:false, time:false};
+  // 오늘의 주문(일일 퀘스트)
+  {
+    const qn = 2 + (S.day>10?1:0) + (S.day>20?1:0);
+    const qc = pick(Object.keys(CATS));
+    S.quest = {cat:qc, n:qn, done:0, reward:Math.round(100 + 60*qn + 30*S.day), claimed:false};
+  }
   genOffers();
   // 파산 구제: 재고도 돈도 없으면 마왕의 비상금 지급
   if (!S.inv.length && S.gold < Math.min(...S.offers.map(o=>o.cost))){
@@ -731,7 +752,7 @@ function genOffers(){
     const it = wpick(pool, i => i.t===1? 5 : i.t===2? (mt>=2?2.4:0) : (mt>=3?1.1:0));
     const disc = R(0.40,0.62);
     const fine = Math.random()<0.10;
-    const cost = Math.max(10, Math.round(it.base*(S.mult[it.cat]||1)*disc*(fine?1.35:1)*(1-0.08*S.up.goblin)));
+    const cost = Math.max(10, Math.round(it.base*(S.mult[it.cat]||1)*disc*(fine?1.35:1)*(1-0.08*S.up.goblin)*(S.buff.blackmarket?0.85:1)));
     S.offers.push({id:it.id, cost, disc:Math.round((1-disc)*100), sold:false, fine});
   }
 }
@@ -760,6 +781,7 @@ function renderBuy(){
     save(); renderBuy(); renderTop();
   });
   $("#buy-inv-n").textContent = `${S.inv.length}/${invCap()}`;
+  $("#buy-quest").innerHTML = questChip();
   $("#buy-inv-cap").textContent = `${S.inv.length}/${invCap()}칸`;
   renderInvGrid($("#buy-inv"), null);
   $("#btn-refresh").disabled = S.refreshed || S.gold<100;
@@ -854,7 +876,7 @@ function renderSellFrame(){
   showScr("scr-sell");
   $("#sell-sub").textContent = `오늘 손님 ${S.custN}명`;
   const dots = Array.from({length:S.custN},(_,i)=>`<i class="${i<S.served?"done":""}"></i>`).join("");
-  $("#queue-info").innerHTML = `손님 ${Math.min(S.served+1,S.custN)} / ${S.custN} <span class="qdots">${dots}</span>${(S.combo||0)>=2?` <span class="chip" style="color:var(--gold2); border-color:rgba(242,201,109,.4)">🔥 콤보 x${S.combo}</span>`:""}`;
+  $("#queue-info").innerHTML = `손님 ${Math.min(S.served+1,S.custN)} / ${S.custN} <span class="qdots">${dots}</span>${(S.combo||0)>=2?` <span class="chip" style="color:var(--gold2); border-color:rgba(242,201,109,.4)">🔥 콤보 x${S.combo}</span>`:""}${questChip()}`;
   $("#sell-inv-cap").textContent = `${S.inv.length}/${invCap()}칸`;
   renderTop();
 }
@@ -907,7 +929,7 @@ function renderBulk(cu){
     {label:`💰 전부 판다 (+${fmt(cu.bulkOffer)}G)`, id:"btn-bulk-sell", fn:()=>{
       cu.gone=true;
       const n=S.inv.length;
-      S.inv.forEach(v=>dexAdd(v.id, 0));
+      S.inv.forEach(v=>{ dexAdd(v.id, 0); questProgress(IT[v.id].cat); });
       S.gold+=cu.bulkOffer; S.dayStat.rev+=cu.bulkOffer; S.dayStat.sold+=n;
       S.total.rev+=cu.bulkOffer; S.total.sold+=n;
       if (cu.bulkOffer > M.rec.bestSale){ M.rec.bestSale = cu.bulkOffer; saveMeta(); }
@@ -1052,6 +1074,7 @@ function saleDone(price, happy, line){
   let tip = 0;
   if (S.combo>=2){ tip = Math.round(price*0.04*Math.min(S.combo-1,5)); S.gold+=tip; S.dayStat.rev+=tip; S.total.rev+=tip; }
   if (S.combo>=5) unlockAch("combo5");
+  questProgress(it.cat);
   dexAdd(it.id, price);
   bumpGold(); (price>=800?SND.bigcoin:SND.coin)();
   const card=$("#cust-card");
@@ -1222,7 +1245,7 @@ function renderUpgrades(){
 
 /* ─── 이벤트 ─── */
 function rollEvent(slot){
-  S.buff={festival:false, rain:false, boom:false};
+  S.buff={festival:false, rain:false, boom:false, blackmarket:false};
   if (Math.random()>0.62) return;
   const lv=repLv();
   const evts=[
@@ -1292,6 +1315,22 @@ function rollEvent(slot){
        SND.bigcoin();
        return {nm:"🏰 왕실 납품", tx:`왕실 집사가 <b>${it.e} ${it.nm}</b>을(를) 시세보다 후하게 사 갔다! <b class="gold">+${fmt(p)}G</b>, 평판 +3`};
      }},
+    {w:2, nm:"💌 팬레터", tx:null, choice:false,
+     fn:()=>{ S.rep+=5; return {nm:"💌 팬레터", tx:"단골이 감사 편지를 보냈다. 마왕은 아무도 안 볼 때 세 번 다시 읽었다. <b>평판 +5</b>"}; }},
+    {w:2, nm:"🕯️ 감정가 방문", tx:null, choice:false,
+     fn:()=>{
+       const cand=S.inv.filter(v=>!v.fine);
+       if (!cand.length) return {nm:"🕯️ 감정가 방문", tx:"떠돌이 감정가가 다녀갔지만, 감정할 물건이 없었다."};
+       const v=pick(cand); v.fine=true;
+       return {nm:"🕯️ 감정가 방문", tx:`감정가의 외눈이 번뜩였다. <b>${IT[v.id].e} ${IT[v.id].nm}</b>은(는) 사실 <b>✨명품</b>이었다! (가치 1.5배)`};
+     }},
+    {w:2, nm:"🌒 암시장 초대장", tx:"검은 두건의 상인이 초대장을 내민다…", choice:true,
+     make:()=>({nm:"🌒 암시장 초대장", tx:"내일 아침 매물을 <b>15% 더 싸게</b> 살 수 있다. 대신 소문이 돌면 <b>평판 −3</b>.",
+       acts:[
+         {label:"🌒 간다 (내일 매입 −15%)", fn:(el)=>{ S.buff.blackmarket=true; S.rep=Math.max(0,S.rep-3);
+           el.innerHTML=`<div class="ti">🌒 암시장</div><div class="tx">주소가 적힌 쪽지를 받았다. 내일 새벽이 기대된다… <b>평판 −3</b></div>`; save(); renderTop(); }},
+         {label:"거절한다", ghost:true, fn:(el)=>{ el.innerHTML=`<div class="ti">🌒 암시장</div><div class="tx">"현명한 선택일지도." 상인은 어둠에 녹아들었다.</div>`; }},
+       ]})},
   ];
   const ev = wpick(evts.filter(e=>e.w>0), e=>e.w);
   SND.event();
@@ -1339,6 +1378,7 @@ function ending(){
   $("#ending-title").textContent="마왕성, 부활!";
   $("#ending-txt").textContent = "30일 만에 빚 30,000G를 완납했다. 금고는 다시 차오르고, 마왕성의 깃발이 올라간다. 이제… 마왕의 다음 행보는?";
   $("#ending-choice").style.display="";
+  $("#btn-end-tycoon").style.display = S.gold>=20000 ? "" : "none"; // 히든 엔딩: 잔액 2만+
   $("#ending-stats").style.display="none";
   $("#btn-endless").style.display="none";
   $("#btn-ending-restart").style.display="none";
@@ -1356,6 +1396,12 @@ function endingEpilogue(kind){
     $("#ending-txt").textContent = "마왕은 용사를 영업부장으로 스카웃했다. 마족과 인간이 나란히 줄을 서는 세계 최초의 종족 통합 상회. 전쟁보다 세일이 무섭다는 것을, 세상이 배웠다.";
     if (!M.endings.includes("peace")) M.endings.push("peace");
     unlockAch("ending_peace");
+  } else if (kind==="tycoon"){
+    $("#ending-e").textContent="🏦😈";
+    $("#ending-title").textContent="재벌 엔딩 — 마계 은행";
+    $("#ending-txt").textContent = "빚을 다 갚고도 금고에 2만 골드. 마왕은 그 돈으로 은행을 세웠다. 이자율은 악마적이지만, 어차피 왕국 재정보다는 낫다며 오늘도 창구에 줄이 늘어선다.";
+    if (!M.endings.includes("tycoon")) M.endings.push("tycoon");
+    unlockAch("ending_tycoon");
   } else {
     $("#ending-e").textContent="😈👑";
     $("#ending-title").textContent="정복 엔딩 — 골드 이즈 파워";
@@ -1391,6 +1437,7 @@ function endingEpilogue(kind){
 }
 $("#btn-end-peace").onclick=()=>endingEpilogue("peace");
 $("#btn-end-conquer").onclick=()=>endingEpilogue("conquer");
+$("#btn-end-tycoon").onclick=()=>endingEpilogue("tycoon");
 $("#btn-endless").onclick=()=>{ S.endless=true; S.day++; save(); startDay(); };
 $("#btn-ending-restart").onclick=()=>{ wipe(); location.reload(); };
 
@@ -1486,7 +1533,7 @@ function showDex(){
 function showHall(){
   const achList = Object.entries(ACH).map(([id,nm])=>
     `<span class="chip" style="margin:2px 2px 0 0; ${M.ach.includes(id)?"border-color:rgba(242,201,109,.5)":"opacity:.4"}">${M.ach.includes(id)?"🏅":"🔒"} ${nm}</span>`).join("");
-  const endTxt = M.endings.length ? M.endings.map(e=>e==="peace"?"🤝 평화":"😈 정복").join(" · ") : "아직 없음";
+  const endTxt = M.endings.length ? M.endings.map(e=>e==="peace"?"🤝 평화":e==="tycoon"?"🏦 재벌":"😈 정복").join(" · ") : "아직 없음";
   modal(`<h3>🏆 명예의 전당</h3>
     <div class="rr"><span>👑 빚 완납(클리어)</span><b>${M.rec.clears}회</b></div>
     <div class="rr"><span>💰 최고 보유 골드</span><b class="gold">${fmt(M.rec.maxGold)}G</b></div>
