@@ -10,6 +10,7 @@
 | `055_move_vector_extension` | pgvector를 `extensions` 스키마로 이동 (lint 0014 해소) |
 | `056_fix_match_tax_citations` | RAG 검색 함수가 삭제된 `irc_sections` 컬럼을 참조해 **호출 즉시 크래시**하던 버그 수정. 반환 필드가 `irc_sections text[]` → `url text`로 변경됨 (**앱 코드에서 RPC 결과 타입 업데이트 필요**). 추가로 대체(superseded)된 인용을 결과에서 제외 |
 | `057_rls_performance_hardening` | RLS 정책의 `auth.uid()/auth.role()` 행별 재평가 8건을 쿼리당 1회로 래핑, `FOR ALL` 쓰기 정책 13개를 INSERT/UPDATE/DELETE로 분리(SELECT 중복 평가 제거), 정책 `authenticated` 롤 한정 |
+| `063_reconciliation_integrity` | **은행 조정 무결성 가드 추가**: 차액(difference)이 명세서잔액−계산잔액과 일치하도록 강제 + 차액이 0이 아니면 '조정완료'(reconciled) 불가. 앱 버그가 거짓 "조정완료"를 저장하는 것을 DB가 차단. 검증: 차액 100 조정완료 시도→거부, in_progress는 허용 ✅ |
 | `062_overpayment_visibility` | **AR/AP 초과결제 은폐 버그 수정**: 인보이스/청구서에 금액 초과 지불 시 amount_paid가 total을 넘어도 status가 'paid'로 위장돼 현금-AR 불일치가 숨겨졌음. 'overpaid' 상태 추가 + 트리거가 감지하도록 수정. 검증: $1000 인보이스에 $1500 지불→overpaid, 환불 시 sent 복귀 ✅ |
 | `060_members_bootstrap_owner` | **온보딩 교착 버그 수정**: 새 조직 생성자가 자기 자신을 owner로 등록할 수 없던 닭-달걀 문제. 멤버가 0명인 조직에 한해 본인·owner로만 부트스트랩 허용(SECURITY DEFINER 헬퍼로 안전하게 검사). 검증: 신규 계정 온보딩 시뮬레이션 성공 + 기존 조직 가로채기 시도 RLS 차단 확인 |
 | `058_seed_tax_strategies` + `059_dedupe_seeded_strategies` | 전략 카탈로그에 **기존에 없던 4개 추가** (`SCORP_REASONABLE_COMP`, `DE_MINIMIS_SAFE_HARBOR`, `HIRE_YOUR_KIDS`, `GA_RURAL_HOSPITAL_CREDIT`) — 인용 포함, conditions/formula는 엔진 DSL 확인 전까지 기본값. 최종 59개 (기존 55 + 신규 4). ⚠️ 참고: `list_tables`의 행 수는 플래너 추정치라 0으로 보였지만 실제로는 전략 55개·인용 7,819건·추천 27건이 이미 적재돼 있었음 — 분석 보고서의 "카탈로그 미탑재" 서술은 이 통계 착시였음 |
