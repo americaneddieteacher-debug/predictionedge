@@ -10,6 +10,7 @@
 | `055_move_vector_extension` | pgvector를 `extensions` 스키마로 이동 (lint 0014 해소) |
 | `056_fix_match_tax_citations` | RAG 검색 함수가 삭제된 `irc_sections` 컬럼을 참조해 **호출 즉시 크래시**하던 버그 수정. 반환 필드가 `irc_sections text[]` → `url text`로 변경됨 (**앱 코드에서 RPC 결과 타입 업데이트 필요**). 추가로 대체(superseded)된 인용을 결과에서 제외 |
 | `057_rls_performance_hardening` | RLS 정책의 `auth.uid()/auth.role()` 행별 재평가 8건을 쿼리당 1회로 래핑, `FOR ALL` 쓰기 정책 13개를 INSERT/UPDATE/DELETE로 분리(SELECT 중복 평가 제거), 정책 `authenticated` 롤 한정 |
+| `062_overpayment_visibility` | **AR/AP 초과결제 은폐 버그 수정**: 인보이스/청구서에 금액 초과 지불 시 amount_paid가 total을 넘어도 status가 'paid'로 위장돼 현금-AR 불일치가 숨겨졌음. 'overpaid' 상태 추가 + 트리거가 감지하도록 수정. 검증: $1000 인보이스에 $1500 지불→overpaid, 환불 시 sent 복귀 ✅ |
 | `060_members_bootstrap_owner` | **온보딩 교착 버그 수정**: 새 조직 생성자가 자기 자신을 owner로 등록할 수 없던 닭-달걀 문제. 멤버가 0명인 조직에 한해 본인·owner로만 부트스트랩 허용(SECURITY DEFINER 헬퍼로 안전하게 검사). 검증: 신규 계정 온보딩 시뮬레이션 성공 + 기존 조직 가로채기 시도 RLS 차단 확인 |
 | `058_seed_tax_strategies` + `059_dedupe_seeded_strategies` | 전략 카탈로그에 **기존에 없던 4개 추가** (`SCORP_REASONABLE_COMP`, `DE_MINIMIS_SAFE_HARBOR`, `HIRE_YOUR_KIDS`, `GA_RURAL_HOSPITAL_CREDIT`) — 인용 포함, conditions/formula는 엔진 DSL 확인 전까지 기본값. 최종 59개 (기존 55 + 신규 4). ⚠️ 참고: `list_tables`의 행 수는 플래너 추정치라 0으로 보였지만 실제로는 전략 55개·인용 7,819건·추천 27건이 이미 적재돼 있었음 — 분석 보고서의 "카탈로그 미탑재" 서술은 이 통계 착시였음 |
 
@@ -20,6 +21,9 @@
 - 온보딩: 신규 계정 셀프서브 전 과정 (org→owner→entity→가시성) ✅
 - **연말 마감**: 마감 후 P&L 0·이익잉여금 정확·손익 리포트는 마감 무시 ✅
 - 재분개(repost): 역분개+신규 원자성, 멱등성 상호작용 검토 ✅
+- **AR 인보이스 흐름**: 부분→완납→초과결제→환불 상태 전이 전부 정확 ✅
+- 데이터 제약 감사: 결제 양수·분개 단면·중복방지(계정/기준액/멤버/거래/은행) 전부 가동 ✅
+- 보안 어드바이저 회귀: 마이그레이션 054~062 이후 새 ERROR·anon 노출 0건 ✅
 
 ## 검증 결과
 - 보안 어드바이저: 108건 → **HaveIBeenPwned 토글 1건만 잔존** (나머지는 의도된 구조인 authenticated RLS 접근)
