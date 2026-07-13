@@ -10,6 +10,8 @@
 | `055_move_vector_extension` | pgvector를 `extensions` 스키마로 이동 (lint 0014 해소) |
 | `056_fix_match_tax_citations` | RAG 검색 함수가 삭제된 `irc_sections` 컬럼을 참조해 **호출 즉시 크래시**하던 버그 수정. 반환 필드가 `irc_sections text[]` → `url text`로 변경됨 (**앱 코드에서 RPC 결과 타입 업데이트 필요**). 추가로 대체(superseded)된 인용을 결과에서 제외 |
 | `057_rls_performance_hardening` | RLS 정책의 `auth.uid()/auth.role()` 행별 재평가 8건을 쿼리당 1회로 래핑, `FOR ALL` 쓰기 정책 13개를 INSERT/UPDATE/DELETE로 분리(SELECT 중복 평가 제거), 정책 `authenticated` 롤 한정 |
+| `065_tax_assets_integrity` | **🔴 감가상각 데이터 무결성**: tax_assets에 취득원가>0·상각기간>0·금액 비음수·총상각액≤원가·처분일≥취득일·판매가 정합성 제약 추가. 잘못된 자산 데이터가 §1245/§1231 계산을 오염시켜 틀린 1120-S를 만드는 것을 차단. 검증: 과상각($10k 자산에 $12k) 거부 확인 ✅ |
+| `066_compliance_effective_overdue` | **연체 상태 표류 수정**: overdue가 저장값이라 마감일 지나도 pending으로 남던 문제. compliance_effective_status()로 읽기 시점 계산 + entity_1120s_readiness가 날짜 기준으로 연체 판정하도록 수정(이전엔 표류된 연체를 놓쳐 준비도 과대평가). 검증 통과 ✅ |
 | `064_closed_period_update_guard` | **🔴 마감기간 무결성 구멍 수정**: 마감 가드가 INSERT에만 걸려 있어, draft를 열린 기간에 만든 뒤 날짜를 마감기간으로 UPDATE→게시하면 마감된 장부가 뚫렸음. 날짜가 마감기간으로 변경될 때 차단(UPDATE OF entry_date)하되 정상 마감/void 워크플로는 유지. 검증: 공격 재현→수정 후 차단 확인, 정상 흐름 통과 ✅ |
 | `063_reconciliation_integrity` | **은행 조정 무결성 가드 추가**: 차액(difference)이 명세서잔액−계산잔액과 일치하도록 강제 + 차액이 0이 아니면 '조정완료'(reconciled) 불가. 앱 버그가 거짓 "조정완료"를 저장하는 것을 DB가 차단. 검증: 차액 100 조정완료 시도→거부, in_progress는 허용 ✅ |
 | `062_overpayment_visibility` | **AR/AP 초과결제 은폐 버그 수정**: 인보이스/청구서에 금액 초과 지불 시 amount_paid가 total을 넘어도 status가 'paid'로 위장돼 현금-AR 불일치가 숨겨졌음. 'overpaid' 상태 추가 + 트리거가 감지하도록 수정. 검증: $1000 인보이스에 $1500 지불→overpaid, 환불 시 sent 복귀 ✅ |
