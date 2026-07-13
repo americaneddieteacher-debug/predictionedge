@@ -251,7 +251,7 @@ input[type=range]{width:100%; accent-color:var(--gold); height:32px}
         <button class="btn ghost small" id="btn-title-hall" style="flex:1">🏆 기록</button>
       </div>
     </div>
-    <p class="title-foot">v1.6 · 자동 저장 · 세계 랭킹 지원</p>
+    <p class="title-foot">v1.7 · 자동 저장 · 세계 랭킹 지원</p>
   </div>
 
   <!-- 상단바 -->
@@ -480,7 +480,7 @@ const ACH = {
   first:"첫 판매", soldout:"완판", rev3000:"하루 매출 3,000G", vip:"VIP 판매",
   debtfree:"빚 완납", craft:"첫 합성", ending_peace:"평화 엔딩", ending_conquer:"정복 엔딩",
   combo5:"콤보 마스터 (x5)", bulk:"큰손과의 거래", skill:"마왕의 힘 각성",
-  quest:"의뢰 완수", ending_tycoon:"재벌 엔딩",
+  quest:"의뢰 완수", ending_tycoon:"재벌 엔딩", raid:"용사 격퇴",
 };
 
 const DEBT_TOTAL = 30000;
@@ -575,7 +575,7 @@ function newState(){
     buff:{festival:false, rain:false, boom:false},
     eventDone:false, sound:true, tut:{buy:false,sell:false,report:false,haggle:false},
     endless:false, total:{rev:0,sold:0}, best:0, combo:0,
-    skills:{awe:false, eye:false, time:false}, quest:null,
+    skills:{awe:false, eye:false, time:false}, quest:null, reg:{},
   };
 }
 function save(){
@@ -616,8 +616,9 @@ async function lbSubmit(name, mode, score, day){
   });
   if (!r.ok) throw new Error("submit "+r.status);
 }
-async function lbTop(mode, limit){
-  const r = await fetch(`${LB.url}?select=name,score,day&mode=eq.${mode}&order=score.desc,created_at.asc&limit=${limit||10}`,
+async function lbTop(mode, limit, sinceISO){
+  const extra = sinceISO ? `&created_at=gte.${sinceISO}` : "";
+  const r = await fetch(`${LB.url}?select=name,score,day&mode=eq.${mode}&order=score.desc,created_at.asc&limit=${limit||10}${extra}`,
     {headers:{apikey:LB.key, Authorization:"Bearer "+LB.key}});
   if (!r.ok) throw new Error("top "+r.status);
   return r.json();
@@ -741,6 +742,44 @@ function startDay(){
   save();
   render();
   if (!S.tut.buy) tutBuy();
+  else if (S.day % 15 === 0) showRaid();
+}
+
+/* ─── 용사 습격전 (15일마다) ─── */
+function showRaid(){
+  const power = Math.round(S.inv.reduce((a,v)=>{const c=IT[v.id].cat; return a + ((c==="wep"||c==="arm")? invValue(v):0);},0) + S.rep*2);
+  const enemy = 600 + S.day*80;
+  const chance = clamp(power/enemy, 0.15, 0.95);
+  const bribe = Math.max(500, Math.round(S.gold*0.10));
+  modal(`<h3>⚔️ 용사 파티 습격!</h3>
+    <p style="font-size:14px; color:var(--muted)">용사 파티가 가게에 들이닥쳤다! 무기·방어구 재고와 명성이 곧 전투력이다.</p>
+    <div class="rr"><span>😈 내 전투력</span><b>${fmt(power)}</b></div>
+    <div class="rr"><span>🛡️ 용사 파티</span><b class="gold">${fmt(enemy)}</b></div>
+    <div class="rr"><span>승리 확률</span><b>${Math.round(chance*100)}%</b></div>
+    <button class="btn" id="raid-fight">⚔️ 맞서 싸운다</button>
+    <button class="btn ghost" id="raid-bribe">🤫 조용히 무마한다 (${fmt(bribe)}G)</button>`, {sticky:true});
+  $("#raid-fight").onclick=()=>{
+    closeModal();
+    if (Math.random()<chance){
+      const loot=pick(ITEMS.filter(i=>i.t>=2));
+      S.rep+=15;
+      const looted = S.inv.length<invCap();
+      if (looted) S.inv.push({id:loot.id, cost:0, fine:Math.random()<0.3});
+      SND.fanfare(); unlockAch("raid");
+      modal(`<h3>🏆 격퇴 성공!</h3><p style="font-size:14px; color:var(--muted)">용사들이 꽁무니를 뺐다! 소문이 퍼져 <b>평판 +15</b>.${looted?` 놓고 간 <b>${loot.e} ${loot.nm}</b>을(를) 전리품으로 획득!`:" (재고가 가득해 전리품은 포기했다)"}</p><button class="btn" id="raid-ok">가게 문 열기</button>`, {sticky:true});
+    } else {
+      const loss=Math.min(S.gold, Math.max(300, Math.round(S.gold*0.15)));
+      S.gold-=loss; S.rep=Math.max(0,S.rep-5);
+      SND.fail();
+      modal(`<h3>💥 패배…</h3><p style="font-size:14px; color:var(--muted)">가게가 털렸다. <b>−${fmt(loss)}G</b>, 평판 −5. 하지만 마왕은 오늘도 문을 연다.</p><button class="btn" id="raid-ok">가게 문 열기</button>`, {sticky:true});
+    }
+    $("#raid-ok").onclick=()=>{ closeModal(); save(); render(); };
+  };
+  $("#raid-bribe").onclick=()=>{
+    if (S.gold<bribe){ toast("골드가 부족하다… 싸울 수밖에!"); return; }
+    S.gold-=bribe; SND.coin(); closeModal(); save(); render();
+    toast(`🤫 ${fmt(bribe)}G로 조용히 무마했다`);
+  };
 }
 
 function genOffers(){
@@ -831,7 +870,8 @@ function genCust(){
       tol:1, want:"any", wantT:1, pat:1, greet:"", counterUsed:false, gone:false, vip:true };
   }
   const c = wpick(CUSTS, t=>t.w[lv]);
-  const tol0 = R(c.tol[0], c.tol[1]);
+  const regN = Math.min((S.reg||{})[c.id]||0, 5);
+  const tol0 = R(c.tol[0], c.tol[1]) * (1 + 0.03*regN);
   let want = Math.random()<0.25 ? "any" : pick(c.cats);
   // 진열창 효과: 취향과 겹치는 재고가 있으면 그 물건을 보고 들어온다
   const stockCats = [...new Set(S.inv.map(v=>IT[v.id].cat))];
@@ -841,7 +881,7 @@ function genCust(){
   if (want!=="any" && Math.random()<0.3 && c.cats.includes(S.hot)) want=S.hot;
   const wantT = RI(1, Math.min(c.maxT, maxTier()));
   return {
-    t:c, tol:tol0, want, wantT, pat:c.pat, greet:pick(c.greet),
+    t:c, tol:tol0, want, wantT, pat:c.pat, greet:pick(c.greet), reg:regN,
     counterUsed:false, gone:false, vip:!!c.vip,
   };
 }
@@ -899,7 +939,7 @@ function renderSell(){
           <div class="cust-nm">${cu.t.nm}${cu.vip?'<span class="vip">VIP</span>':""}</div>
           <div class="cust-tags">
             <span class="chip">🛍️ <b>${wantTxt}</b></span>
-            <span class="chip hearts" id="cust-hearts">${heartsHtml(cu.pat)}</span>
+            <span class="chip hearts" id="cust-hearts">${heartsHtml(cu.pat)}</span>${cu.reg?`<span class="chip" style="color:var(--green)">💚 단골 x${cu.reg}</span>`:""}
           </div>
         </div>
       </div>
@@ -1075,6 +1115,7 @@ function saleDone(price, happy, line){
   if (S.combo>=2){ tip = Math.round(price*0.04*Math.min(S.combo-1,5)); S.gold+=tip; S.dayStat.rev+=tip; S.total.rev+=tip; }
   if (S.combo>=5) unlockAch("combo5");
   questProgress(it.cat);
+  if (happy>=1 && cu.t.id){ S.reg=S.reg||{}; if ((S.reg[cu.t.id]||0)<5 && Math.random()<0.4) S.reg[cu.t.id]=(S.reg[cu.t.id]||0)+1; }
   dexAdd(it.id, price);
   bumpGold(); (price>=800?SND.bigcoin:SND.coin)();
   const card=$("#cust-card");
@@ -1562,9 +1603,11 @@ function lbRows(list, mode){
 async function showWorld(){
   modal(`<h3>🌍 세계 랭킹</h3><p class="muted" style="font-size:12.5px; margin:4px 0 0">불러오는 중…</p>`);
   try{
-    const [clears, endless] = await Promise.all([lbTop("clear",10), lbTop("endless",10)]);
+    const now = new Date();
+    const season = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-01`;
+    const [clears, endless] = await Promise.all([lbTop("clear",10,season), lbTop("endless",10)]);
     modal(`<h3>🌍 세계 랭킹</h3>
-      <h4 style="margin:12px 0 2px; font-size:14px">👑 클리어 — 남은 골드</h4>${lbRows(clears,"clear")}
+      <h4 style="margin:12px 0 2px; font-size:14px">👑 클리어 — ${now.getMonth()+1}월 시즌</h4>${lbRows(clears,"clear")}
       <h4 style="margin:16px 0 2px; font-size:14px">♾️ 무한 모드 — 도달 일차</h4>${lbRows(endless,"endless")}
       <button class="btn" id="world-close">닫기</button>`);
   }catch(e){
@@ -1615,6 +1658,7 @@ function render(){
       // 구버전 저장 마이그레이션
       S.up.forge = S.up.forge||0;
       S.skills = S.skills||{awe:false, eye:false, time:false};
+      S.reg = S.reg||{};
       if (S.bgm===undefined) S.bgm=true;
       if (Array.isArray(S.ach)){ S.ach.forEach(a=>{ if(!M.ach.includes(a)) M.ach.push(a); }); saveMeta(); }
       SND.click(); bgmStart();
