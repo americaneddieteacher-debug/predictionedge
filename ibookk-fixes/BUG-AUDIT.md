@@ -59,3 +59,13 @@ BIG 저장소 접근이 필요합니다. BIG 세션에서 `/goal` 또는 code-re
 - React 컴포넌트 예외 처리(빈 상태, 로딩 실패, null 렌더)
 - tax_recommendations **생성** 흐름(AI 호출·프롬프트) — DB는 저장 정합성만 검증됨
 - Plaid/Shopify/Check HQ/TaxBandits 연동 에러 핸들링
+
+## 추가 감사: predictionedge 저장소 (이 세션 직접 접근 가능한 코드)
+DB 외에 이 저장소의 정적 파일도 감사했습니다.
+- **game.html (용병단연대기, 1,515줄)**: 로직 전반 견고. **발견·수정 1건** —
+  손상/구버전 세이브 로드 시 알 수 없는 직업(cls)이 있으면 `CLASSES[m.cls].growth`에서
+  TypeError로 **게임 전체 흰 화면**. `load()`에 sanitizeMerc 정화 계층 추가(알 수 없는
+  직업 용병 제거, 숫자 필드 강제, 장비 형태 검증, 통계/자원 기본값 보정). 문법 검증 통과.
+- **index.html / kit.html (PredictionEdge 랜딩·킷)**: 구독 링크가 플레이스홀더
+  (`https://predictionedge.pro/sub`, index.html에 TODO 주석). 실제 Beehiiv URL로 교체 필요 —
+  기능 버그는 아니나 출시 전 사용자가 교체해야 할 항목(콘텐츠 플레이스홀더).

@@ -611,14 +611,38 @@ function addRep(n){ S.rep=Math.max(0,S.rep+n); checkStory(); }
 
 /* ---------- 저장/불러오기 ---------- */
 function save(){ try{ localStorage.setItem(SAVE_KEY, JSON.stringify(S)); }catch(e){} }
+// 손상/구버전 세이브를 렌더링 크래시 없이 견디게 정화한다.
+function sanitizeMerc(m){
+  if(!m || typeof m!=='object') return null;
+  if(!CLASSES[m.cls]) return null;                 // 알 수 없는 직업 → 버림 (흰 화면 방지)
+  const num=(v,d)=> Number.isFinite(v)?v:d;
+  m.lvl   = clamp(Math.floor(num(m.lvl,1)), 1, 10);
+  m.exp   = Math.max(0, num(m.exp,0));
+  m.injury= Math.max(0, Math.floor(num(m.injury,0)));
+  if(m.trait && (typeof m.trait!=='object')) m.trait=null;
+  // 제거된 장비 id 참조 정화 (저장된 스탯 복사본은 유지하되 형태만 검증)
+  if(m.weapon && typeof m.weapon.atk!=='number') m.weapon=null;
+  if(m.armor  && typeof m.armor.def!=='number') m.armor=null;
+  const maxhp = mercStats(m).hp;
+  m.hp = clamp(Math.floor(num(m.hp,maxhp)), 0, maxhp) || maxhp;
+  if(typeof m.id!=='number') m.id = mercSeq++;
+  return m;
+}
 function load(){
   try{
     const raw = localStorage.getItem(SAVE_KEY);
     if(!raw) return null;
     const s = JSON.parse(raw);
     if(!s || s.v!==1 || !Array.isArray(s.roster)) return null;
-    mercSeq = Math.max(1,...s.roster.concat(s.candidates||[]).map(m=>m.id+1), 1);
-    contractSeq = Math.max(1,...(s.contracts||[]).filter(c=>c.id!=='FINAL').map(c=>c.id+1), 1);
+    // seq를 먼저 복원해야 sanitizeMerc가 새 id를 안전하게 발급한다
+    mercSeq = Math.max(1,...s.roster.concat(s.candidates||[]).map(m=>(m&&m.id||0)+1), 1);
+    contractSeq = Math.max(1,...(s.contracts||[]).filter(c=>c&&c.id!=='FINAL').map(c=>(c.id||0)+1), 1);
+    s.roster     = s.roster.map(sanitizeMerc).filter(Boolean);
+    s.candidates = Array.isArray(s.candidates) ? s.candidates.map(sanitizeMerc).filter(Boolean) : [];
+    if(!Array.isArray(s.contracts)) s.contracts = [];
+    if(!Array.isArray(s.chron)) s.chron = [];
+    if(!s.stats) s.stats = { battles:0,wins:0,kills:0,goldEarned:0,fallen:0 };
+    ['gold','food','rep','potions','day'].forEach(k=>{ if(!Number.isFinite(s[k])) s[k]= (k==='day'?1:0); });
     return s;
   }catch(e){ return null; }
 }
