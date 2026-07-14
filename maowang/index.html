@@ -97,7 +97,7 @@ input{-webkit-user-select:text; user-select:text}
 .offer.sold-out{opacity:.35; pointer-events:none}
 .offer .disc{position:absolute; top:8px; right:8px; font-size:10.5px; background:rgba(87,217,143,.15); color:var(--green); border-radius:99px; padding:2px 7px; font-weight:800}
 .tier-tag{font-size:10px; font-weight:800; border-radius:5px; padding:1px 5px; vertical-align:1px}
-.t1{background:rgba(124,195,255,.15); color:var(--blue)} .t2{background:rgba(167,139,250,.18); color:var(--purple)} .t3{background:rgba(242,201,109,.15); color:var(--gold)}
+.t1{background:rgba(124,195,255,.15); color:var(--blue)} .t2{background:rgba(167,139,250,.18); color:var(--purple)} .t3{background:rgba(242,201,109,.15); color:var(--gold)} .t4{background:rgba(255,107,122,.18); color:var(--red)}
 
 /* ─── 영업(손님) ─── */
 #cust-area{min-height:220px}
@@ -251,7 +251,7 @@ input[type=range]{width:100%; accent-color:var(--gold); height:32px}
         <button class="btn ghost small" id="btn-title-hall" style="flex:1">🏆 기록</button>
       </div>
     </div>
-    <p class="title-foot">v1.7 · 자동 저장 · 세계 랭킹 지원</p>
+    <p class="title-foot">v1.8 · 자동 저장 · 세계 랭킹 지원</p>
   </div>
 
   <!-- 상단바 -->
@@ -427,6 +427,12 @@ const ITEMS = [
   {id:"c6", nm:"달빛 귀걸이",   e:"🌙", cat:"acc", t:2, base:420},
   {id:"r5", nm:"고대 주화 꾸러미", e:"💰", cat:"rel", t:1, base:110},
   {id:"r6", nm:"용의 눈물",     e:"💧", cat:"rel", t:2, base:360},
+  {id:"p7", nm:"신들의 넥타르", e:"🏺", cat:"pot", t:4, base:3200},
+  {id:"w7", nm:"화산심장 대검", e:"🌋", cat:"wep", t:4, base:4200},
+  {id:"a7", nm:"별빛 수호갑",   e:"🌌", cat:"arm", t:4, base:4000},
+  {id:"m7", nm:"창세의 마도서", e:"🌠", cat:"mag", t:4, base:4500},
+  {id:"c7", nm:"시간의 모래시계", e:"⌛", cat:"acc", t:4, base:3800},
+  {id:"r7", nm:"세계수의 씨앗", e:"🌱", cat:"rel", t:4, base:5000},
 ];
 const IT = Object.fromEntries(ITEMS.map(i=>[i.id,i]));
 
@@ -633,7 +639,7 @@ function repInfo(){
 }
 function invCap(){ return 8 + S.up.shelf*4; }
 function debtLeft(){ return DEBT_TOTAL - S.paid; }
-function maxTier(){ const lv=repLv(); return lv>=3?3: lv>=1?2:1; }
+function maxTier(){ const lv=repLv(); return lv>=4?4: lv>=3?3: lv>=1?2:1; }
 function value(item){ return Math.round(item.base * (S.mult[item.cat]||1)); }
 function invValue(inv){ return Math.round(value(IT[inv.id]) * (inv.fine?1.5:1)); }
 function questChip(){
@@ -742,33 +748,34 @@ function startDay(){
   save();
   render();
   if (!S.tut.buy) tutBuy();
-  else if (S.day % 15 === 0) showRaid();
+  else if (S.day % 15 === 0) showRaid(false);
+  else if (S.day === 25 || (S.endless && S.day % 25 === 0)) showRaid(true);
 }
 
-/* ─── 용사 습격전 (15일마다) ─── */
-function showRaid(){
+/* ─── 용사 습격전 (15일마다) / 대천사 강림 (25일) ─── */
+function showRaid(boss){
   const power = Math.round(S.inv.reduce((a,v)=>{const c=IT[v.id].cat; return a + ((c==="wep"||c==="arm")? invValue(v):0);},0) + S.rep*2);
-  const enemy = 600 + S.day*80;
+  const enemy = boss ? 1200 + S.day*110 : 600 + S.day*80;
   const chance = clamp(power/enemy, 0.15, 0.95);
-  const bribe = Math.max(500, Math.round(S.gold*0.10));
-  modal(`<h3>⚔️ 용사 파티 습격!</h3>
-    <p style="font-size:14px; color:var(--muted)">용사 파티가 가게에 들이닥쳤다! 무기·방어구 재고와 명성이 곧 전투력이다.</p>
+  const bribe = Math.max(500, Math.round(S.gold*(boss?0.15:0.10)));
+  modal(`<h3>${boss?"⚜️ 대천사 강림!":"⚔️ 용사 파티 습격!"}</h3>
+    <p style="font-size:14px; color:var(--muted)">${boss?"천계가 직접 움직였다. 대천사가 마왕상회의 문 앞에 내려섰다!":"용사 파티가 가게에 들이닥쳤다!"} 무기·방어구 재고와 명성이 곧 전투력이다.</p>
     <div class="rr"><span>😈 내 전투력</span><b>${fmt(power)}</b></div>
-    <div class="rr"><span>🛡️ 용사 파티</span><b class="gold">${fmt(enemy)}</b></div>
+    <div class="rr"><span>${boss?"⚜️ 대천사":"🛡️ 용사 파티"}</span><b class="gold">${fmt(enemy)}</b></div>
     <div class="rr"><span>승리 확률</span><b>${Math.round(chance*100)}%</b></div>
     <button class="btn" id="raid-fight">⚔️ 맞서 싸운다</button>
     <button class="btn ghost" id="raid-bribe">🤫 조용히 무마한다 (${fmt(bribe)}G)</button>`, {sticky:true});
   $("#raid-fight").onclick=()=>{
     closeModal();
     if (Math.random()<chance){
-      const loot=pick(ITEMS.filter(i=>i.t>=2));
-      S.rep+=15;
+      const loot=pick(ITEMS.filter(i=> boss? i.t>=3 : i.t>=2));
+      S.rep += boss?30:15;
       const looted = S.inv.length<invCap();
-      if (looted) S.inv.push({id:loot.id, cost:0, fine:Math.random()<0.3});
+      if (looted) S.inv.push({id:loot.id, cost:0, fine:Math.random()<(boss?0.5:0.3)});
       SND.fanfare(); unlockAch("raid");
-      modal(`<h3>🏆 격퇴 성공!</h3><p style="font-size:14px; color:var(--muted)">용사들이 꽁무니를 뺐다! 소문이 퍼져 <b>평판 +15</b>.${looted?` 놓고 간 <b>${loot.e} ${loot.nm}</b>을(를) 전리품으로 획득!`:" (재고가 가득해 전리품은 포기했다)"}</p><button class="btn" id="raid-ok">가게 문 열기</button>`, {sticky:true});
+      modal(`<h3>🏆 격퇴 성공!</h3><p style="font-size:14px; color:var(--muted)">${boss?"대천사가 날개를 접고 물러났다! 마계 전체가 술렁인다.":"용사들이 꽁무니를 뺐다!"} <b>평판 +${boss?30:15}</b>.${looted?` 놓고 간 <b>${loot.e} ${loot.nm}</b>을(를) 전리품으로 획득!`:" (재고가 가득해 전리품은 포기했다)"}</p><button class="btn" id="raid-ok">가게 문 열기</button>`, {sticky:true});
     } else {
-      const loss=Math.min(S.gold, Math.max(300, Math.round(S.gold*0.15)));
+      const loss=Math.min(S.gold, Math.max(300, Math.round(S.gold*(boss?0.20:0.15))));
       S.gold-=loss; S.rep=Math.max(0,S.rep-5);
       SND.fail();
       modal(`<h3>💥 패배…</h3><p style="font-size:14px; color:var(--muted)">가게가 털렸다. <b>−${fmt(loss)}G</b>, 평판 −5. 하지만 마왕은 오늘도 문을 연다.</p><button class="btn" id="raid-ok">가게 문 열기</button>`, {sticky:true});
@@ -788,7 +795,7 @@ function genOffers(){
   S.offers = [];
   for (let k=0;k<9;k++){
     // 상위 티어는 낮은 확률로
-    const it = wpick(pool, i => i.t===1? 5 : i.t===2? (mt>=2?2.4:0) : (mt>=3?1.1:0));
+    const it = wpick(pool, i => i.t===1? 5 : i.t===2? (mt>=2?2.4:0) : i.t===3? (mt>=3?1.1:0) : (mt>=4?0.5:0));
     const disc = R(0.40,0.62);
     const fine = Math.random()<0.10;
     const cost = Math.max(10, Math.round(it.base*(S.mult[it.cat]||1)*disc*(fine?1.35:1)*(1-0.08*S.up.goblin)*(S.buff.blackmarket?0.85:1)));
@@ -1176,7 +1183,7 @@ function renderReport(){
 
 /* ─── 마력 화로(합성) ─── */
 let craftSel=[];
-const CRAFT_FEE = {2:120, 3:500};
+const CRAFT_FEE = {2:120, 3:500, 4:1500};
 function renderCraft(){
   const sec=$("#craft-sec");
   if (!S.up.forge){ sec.innerHTML=""; return; }
@@ -1191,7 +1198,7 @@ function renderCraft(){
     const a=IT[S.inv[craftSel[0]].id], b=IT[S.inv[craftSel[1]].id];
     if (a.cat!==b.cat) actHtml=`<div class="muted" style="font-size:12.5px; margin-top:6px">⚠️ 같은 카테고리 2개가 필요합니다.</div>`;
     else if (a.t!==b.t) actHtml=`<div class="muted" style="font-size:12.5px; margin-top:6px">⚠️ 같은 티어 2개가 필요합니다.</div>`;
-    else if (a.t>=3) actHtml=`<div class="muted" style="font-size:12.5px; margin-top:6px">⚠️ T3는 이미 최고 티어입니다.</div>`;
+    else if (a.t>=4) actHtml=`<div class="muted" style="font-size:12.5px; margin-top:6px">⚠️ T4는 이미 최고 티어입니다.</div>`;
     else {
       const target=a.t+1, fee=CRAFT_FEE[target];
       actHtml=`<button class="btn small" id="btn-craft" style="margin-top:8px" ${S.gold<fee?"disabled":""}>🔥 합성하기 → ${CATS[a.cat].nm} T${target} <span style="font-weight:600">(비용 ${fmt(fee)}G)</span></button>`;
