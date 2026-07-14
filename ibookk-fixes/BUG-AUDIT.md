@@ -69,3 +69,24 @@ DB 외에 이 저장소의 정적 파일도 감사했습니다.
 - **index.html / kit.html (PredictionEdge 랜딩·킷)**: 구독 링크가 플레이스홀더
   (`https://predictionedge.pro/sub`, index.html에 TODO 주석). 실제 Beehiiv URL로 교체 필요 —
   기능 버그는 아니나 출시 전 사용자가 교체해야 할 항목(콘텐츠 플레이스홀더).
+
+## ✅ 앱 계층 감사·수정 완결 (2026-07-13, BIG 저장소 접근 확보 후)
+BIG 저장소를 세션에 추가(add_repo)해 앱 소스를 직접 감사·수정했습니다.
+**BIG PR #2** (americaneddieteacher-debug/BIG#2, 브랜치 claude/ibookk-app-security-fixes) — typecheck·test 통과.
+
+| # | 등급 | 버그 | 수정 |
+|---|---|---|---|
+| A1 | 🟠 HIGH | **인가 우회**: 서버 액션이 RLS 우회 admin 클라이언트로 쓰면서 역할 미검증 → viewer도 청구서/인보이스/원장/급여/라이선스/통지서/세무 생성·수정 가능 | auth-context에 assertRole 헬퍼 + 8개 액션 파일에 DB RLS와 동일한 역할 게이트(bookkeeper/admin) |
+| A2 | 🟡 MED | **overpaid 상태 UI 미반영**(DB 062): 미수금 합계·연체 판정·상태 뱃지가 overpaid를 몰라 오작동 | invoices/bills 페이지 필터·뱃지맵 보정 |
+| A3 | 🟡 MED | **중복 연락처**: createBill/createInvoice가 매번 벤더/고객 새로 INSERT | 이름 기준 조회 후 재사용 |
+| A4 | 🟡 MED | **비원자적 쓰기**: 라인 insert 에러 미확인 + 실패 시 라인 없는 부모 잔존 | 에러 확인 + 부모 롤백 |
+
+### 감사 중 확인된 사실
+- **B1(RAG 반환형 변경)은 앱 수정 불필요**: 소비부 인터페이스가 애초에 irc_sections를 안 읽었음 → DB(056) 수정으로 이미 정상.
+- **라이브(master) 범위**: 감가상각/§1245/1120-S 엔진은 master에 **없음** — 미병합 브랜치 ibookk/hardening-ledger-foundation 전용. 라이브 앱은 부기(장부·인보이스·청구서·거래·영수증·통지서·세무Q&A/전략) 중심.
+- getSessionContext는 role을 반환하나 액션들이 안 썼던 것이 A1의 근본 원인.
+
+### 남은 것 (별도 브랜치 필요)
+- ibookk/hardening-ledger-foundation 브랜치의 tax-engine 계산 로직(MACRS/§1245/§1231) 감사 — 그 브랜치에서 별도 진행.
+- 마이그레이션 054~067을 claude/ibookk-os-migration-sync-oyiams 브랜치와 동기화.
+
